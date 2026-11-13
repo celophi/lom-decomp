@@ -4372,12 +4372,9 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
     s32 ring_row_words;
     s32 rows_left;
     s32 spill_bits;
-    s32 ring_bytes;
-    s32 ring_row_bytes;
     u16 cols;
     s32 reach;
     u32* src_word;
-    s32 word_bits;
     u8* out;
     FieldCollisionDilationMasks* ring_write;
     FieldCollisionDilationMasks* ring_read;
@@ -4398,15 +4395,12 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
     u32 carry_touch;
     u32 carry_solid;
     s32 bits_left;
-    u32* ring_inner;
     u32 entry_touch;
     u32 entry_solid;
     u32 entry_inner;
     u8 cell;
     u32 prev_touch;
     u32 prev_solid;
-    u8 cell2;
-    u8 cell1;
     u32 spread_solid;
     u32 spread4;
 
@@ -4416,21 +4410,18 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
     ring_row_words = (((cols - 3) >> FIELD_COLLISION_GROUP_WORD_SHIFT) + 1) * (sizeof(FieldCollisionDilationMasks) / sizeof(u32));
     reach = footprint_width - 1;
 
-    do
+    if (footprint_depth >= 3)
     {
-        if (footprint_depth >= 3)
-        {
-            ring_write = (FieldCollisionDilationMasks*)FIELD_COLLISION_SCRATCH;
-            ring_read = (FieldCollisionDilationMasks*)FIELD_COLLISION_SCRATCH;
-            ring_end = (FieldCollisionDilationMasks*)((ring_row_words * footprint_depth * sizeof(u32)) + FIELD_COLLISION_SCRATCH);
-        }
-        else
-        {
-            ring_write = NULL;
-            ring_read = NULL;
-            ring_end = NULL;
-        }
-    } while (0);
+        ring_write = (FieldCollisionDilationMasks*)FIELD_COLLISION_SCRATCH;
+        ring_read = (FieldCollisionDilationMasks*)FIELD_COLLISION_SCRATCH;
+        ring_end = (FieldCollisionDilationMasks*)((u32*)FIELD_COLLISION_SCRATCH + ring_row_words * footprint_depth);
+    }
+    else
+    {
+        ring_write = NULL;
+        ring_read = NULL;
+        ring_end = NULL;
+    }
 
     src_row = (u32*)scene->group_work;
     groups_left = scene->group_count;
@@ -4441,484 +4432,455 @@ static void field_collision_dilate_tiles(s32 footprint_width, s32 footprint_dept
     {
         remaining = scene->tile_cols * 2;
         FIELD_COLLISION_FILL_BLOCKED(out, count, remaining);
-        row = 0;
         rows_left = (scene->tile_rows - footprint_depth) - FIELD_COLLISION_GROUP_TILE_PADDING;
 
-        if (rows_left != -1)
+        for (row = 0; rows_left != -1; row++, rows_left--)
         {
-            ring_row_bytes = ring_row_words * sizeof(u32);
-            ring_bytes = ring_row_words * footprint_depth * sizeof(u32);
+            src_word = src_row;
+            remaining = scene->tile_cols;
+            src_row = src_word + row_words;
+            in_solid = src_word[0];
+            in_touch = src_word[1];
+            remaining -= footprint_width + 1;
+            src_word += 2;
 
-            do
+            switch (footprint_width - 1)
             {
-                src_word = src_row;
-                remaining = scene->tile_cols;
-                src_row = src_word + row_words;
-                in_solid = src_word[0];
-                in_touch = src_word[1];
-                remaining -= footprint_width + 1;
-                src_word += 2;
+                default:
+                    acc_touch = in_touch | (in_touch >> reach);
+                    inner_touch = (in_touch >> 1) | (in_touch >> 2);
+                    shift_touch = inner_touch;
+                    shift_solid = in_solid | (in_solid >> 1);
+                    spread = shift_solid >> 2;
+                    acc_solid = shift_solid | spread;
+                    shift_solid = spread;
+                    count = (footprint_width - 6) >> 1;
 
-                switch (footprint_width - 1)
+                    do
+                    {
+                        shift_touch >>= 2;
+                        inner_touch |= shift_touch;
+                        shift_solid >>= 2;
+                        count--;
+                        acc_solid |= shift_solid;
+                    } while (count != -1);
+
+                    if (footprint_width & 1)
+                    {
+                        inner_touch |= in_touch >> (footprint_width - 2);
+                        acc_solid |= in_solid >> reach;
+                    }
+
+                    carry_touch = in_touch;
+                    carry_solid = in_solid;
+                    break;
+                case 4:
+                    inner_touch = (in_touch >> 1) | (in_touch >> 2) | (in_touch >> 3);
+                    acc_touch = in_touch | (in_touch >> 4);
+                    shift_solid = in_solid | (in_solid >> 1);
+                    acc_solid = shift_solid | (shift_solid >> 2) | (in_solid >> 4);
+                    carry_touch = in_touch;
+                    carry_solid = in_solid;
+                    break;
+                case 3:
+                    inner_touch = (in_touch >> 1) | (in_touch >> 2);
+                    acc_touch = in_touch | (in_touch >> 3);
+                    shift_solid = in_solid | (in_solid >> 1);
+                    acc_solid = shift_solid | (shift_solid >> 2);
+                    carry_touch = in_touch;
+                    carry_solid = in_solid;
+                    break;
+                case 2:
+                    inner_touch = in_touch >> 1;
+                    acc_touch = in_touch | (in_touch >> 2);
+                    acc_solid = in_solid | (in_solid >> 1) | (in_solid >> 2);
+                    carry_touch = in_touch;
+                    carry_solid = in_solid;
+                    break;
+                case 1:
+                    inner_touch = 0;
+                    acc_touch = in_touch | (in_touch >> 1);
+                    acc_solid = in_solid | (in_solid >> 1);
+                    carry_touch = in_touch;
+                    carry_solid = in_solid;
+                    break;
+                case 0:
+                    inner_touch = 0;
+                    acc_touch = in_touch;
+                    acc_solid = in_solid;
+                    carry_touch = 0;
+                    carry_solid = 0;
+                    break;
+            }
+
+            bits_left = FIELD_COLLISION_GROUP_WORD_BITS - reach;
+
+            if (footprint_depth != 1)
+            {
+                if (footprint_depth == 2)
                 {
-                    default:
-                        acc_touch = in_touch | (in_touch >> reach);
-                        inner_touch = (in_touch >> 1) | (in_touch >> 2);
-                        shift_touch = inner_touch;
-                        shift_solid = in_solid | (in_solid >> 1);
-                        spread = shift_solid >> 2;
-                        acc_solid = shift_solid | spread;
-                        shift_solid = spread;
-                        count = (footprint_width - 6) >> 1;
+                    if (!(row & 1))
+                    {
+                        ring_write = (FieldCollisionDilationMasks*)FIELD_COLLISION_SCRATCH;
+                        ring_read = (FieldCollisionDilationMasks*)((u32*)FIELD_COLLISION_SCRATCH + ring_row_words);
+                    }
+                    else
+                    {
+                        ring_write = (FieldCollisionDilationMasks*)((u32*)FIELD_COLLISION_SCRATCH + ring_row_words);
+                        ring_read = (FieldCollisionDilationMasks*)FIELD_COLLISION_SCRATCH;
+                    }
+                }
+                else
+                {
+                    if (ring_write >= ring_end)
+                    {
+                        ring_write = (FieldCollisionDilationMasks*)((u32*)ring_write - ring_row_words * footprint_depth);
+                    }
 
+                    if (ring_read >= ring_end)
+                    {
+                        ring_read = (FieldCollisionDilationMasks*)((u32*)ring_read - ring_row_words * footprint_depth);
+                    }
+                }
+            }
+
+            while (remaining != 0)
+            {
+                if (bits_left < remaining)
+                {
+                    remaining -= bits_left;
+                }
+                else
+                {
+                    bits_left = remaining;
+                    remaining = 0;
+                }
+
+                acc_touch |= inner_touch;
+
+                switch (footprint_depth)
+                {
+                    case 1:
                         do
                         {
-                            shift_touch >>= 2;
-                            inner_touch |= shift_touch;
-                            shift_solid >>= 2;
-                            count--;
-                            acc_solid |= shift_solid;
-                        } while (count != -1);
+                            if (acc_touch & 1)
+                            {
+                                cell = FIELD_COLLISION_TILE_TOUCHED;
 
-                        if (footprint_width & 1)
-                        {
-                            inner_touch |= in_touch >> (footprint_width - 2);
-                            acc_solid |= in_solid >> reach;
-                        }
+                                if (acc_solid & 1)
+                                {
+                                    cell = FIELD_COLLISION_TILE_BLOCKED;
+                                }
+                            }
+                            else
+                            {
+                                cell = FIELD_COLLISION_TILE_FREE;
+                            }
 
-                        carry_touch = in_touch;
-                        carry_solid = in_solid;
-                        break;
-                    case 4:
-                        inner_touch = (in_touch >> 1) | (in_touch >> 2) | (in_touch >> 3);
-                        acc_touch = in_touch | (in_touch >> 4);
-                        shift_solid = in_solid | (in_solid >> 1);
-                        acc_solid = shift_solid | (shift_solid >> 2) | (in_solid >> 4);
-                        carry_touch = in_touch;
-                        carry_solid = in_solid;
-                        break;
-                    case 3:
-                        inner_touch = (in_touch >> 1) | (in_touch >> 2);
-                        acc_touch = in_touch | (in_touch >> 3);
-                        shift_solid = in_solid | (in_solid >> 1);
-                        acc_solid = shift_solid | (shift_solid >> 2);
-                        carry_touch = in_touch;
-                        carry_solid = in_solid;
+                            *out = cell;
+                            out++;
+                            acc_touch >>= 1;
+                            bits_left--;
+                            acc_solid >>= 1;
+                        } while (bits_left != 0);
+
                         break;
                     case 2:
-                        inner_touch = in_touch >> 1;
-                        acc_touch = in_touch | (in_touch >> 2);
-                        acc_solid = in_solid | (in_solid >> 1) | (in_solid >> 2);
-                        carry_touch = in_touch;
-                        carry_solid = in_solid;
-                        break;
-                    case 1:
-                        inner_touch = 0;
-                        acc_touch = in_touch | (in_touch >> 1);
-                        acc_solid = in_solid | (in_solid >> 1);
-                        carry_touch = in_touch;
-                        carry_solid = in_solid;
-                        break;
-                    case 0:
-                        inner_touch = 0;
-                        acc_touch = in_touch;
-                        acc_solid = in_solid;
-                        carry_touch = 0;
-                        carry_solid = 0;
-                        break;
-                }
+                        ring_write->solid_bits = acc_solid;
+                        ring_write->touch_bits = acc_touch;
+                        ring_write++;
 
-                word_bits = FIELD_COLLISION_GROUP_WORD_BITS;
-                bits_left = word_bits - reach;
-
-                if (footprint_depth != 1)
-                {
-                    if (footprint_depth == 2)
-                    {
-                        if (!(row & 1))
+                        if (row != 0)
                         {
-                            ring_write = (FieldCollisionDilationMasks*)FIELD_COLLISION_SCRATCH;
-                            ring_read = (FieldCollisionDilationMasks*)(FIELD_COLLISION_SCRATCH + ring_row_bytes);
-                        }
-                        else
-                        {
-                            ring_write = (FieldCollisionDilationMasks*)(ring_row_bytes + FIELD_COLLISION_SCRATCH);
-                            ring_read = (FieldCollisionDilationMasks*)FIELD_COLLISION_SCRATCH;
-                        }
-                    }
-                    else
-                    {
-                        if (ring_write >= ring_end)
-                        {
-                            ring_write = (FieldCollisionDilationMasks*)((u8*)ring_write - ring_bytes);
-                        }
+                            prev_touch = ring_read->touch_bits;
+                            prev_solid = ring_read->solid_bits;
+                            ring_read++;
+                            acc_touch |= prev_touch;
+                            acc_solid |= prev_solid;
 
-                        if (ring_read >= ring_end)
-                        {
-                            ring_read = (FieldCollisionDilationMasks*)((u8*)ring_read - ring_bytes);
-                        }
-                    }
-                }
-
-                if (remaining != 0)
-                {
-                    ring_inner = &ring_write->interior_touch_bits;
-                next_word:
-                    if (bits_left < remaining)
-                    {
-                        remaining -= bits_left;
-                    }
-                    else
-                    {
-                        bits_left = remaining;
-                        remaining = 0;
-                    }
-
-                    acc_touch |= inner_touch;
-
-                    switch (footprint_depth)
-                    {
-                        case 1:
                             do
                             {
                                 if (acc_touch & 1)
                                 {
-                                    cell1 = FIELD_COLLISION_TILE_TOUCHED;
+                                    cell = FIELD_COLLISION_TILE_TOUCHED;
 
                                     if (acc_solid & 1)
                                     {
-                                        cell1 = FIELD_COLLISION_TILE_BLOCKED;
+                                        cell = FIELD_COLLISION_TILE_BLOCKED;
                                     }
                                 }
                                 else
                                 {
-                                    cell1 = FIELD_COLLISION_TILE_FREE;
+                                    cell = FIELD_COLLISION_TILE_FREE;
                                 }
 
-                                *out = cell1;
+                                *out = cell;
                                 out++;
                                 acc_touch >>= 1;
                                 bits_left--;
                                 acc_solid >>= 1;
                             } while (bits_left != 0);
+                        }
 
-                            break;
-                        case 2:
-                            ring_write->solid_bits = acc_solid;
-                            ring_inner[-1] = acc_touch;
-                            ring_inner += sizeof(FieldCollisionDilationMasks) / sizeof(u32);
-                            ring_write++;
+                        break;
+                    default:
+                        ring_write->solid_bits = acc_solid;
+                        ring_write->touch_bits = acc_touch;
+                        ring_write->interior_touch_bits = inner_touch;
+                        ring_write++;
 
-                            if (row != 0)
-                            {
-                                prev_touch = ring_read->touch_bits;
-                                prev_solid = ring_read->solid_bits;
-                                ring_read++;
-                                acc_touch |= prev_touch;
-                                acc_solid |= prev_solid;
-
-                                do
-                                {
-                                    if (acc_touch & 1)
-                                    {
-                                        cell2 = FIELD_COLLISION_TILE_TOUCHED;
-
-                                        if (acc_solid & 1)
-                                        {
-                                            cell2 = FIELD_COLLISION_TILE_BLOCKED;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        cell2 = FIELD_COLLISION_TILE_FREE;
-                                    }
-
-                                    *out = cell2;
-                                    out++;
-                                    acc_touch >>= 1;
-                                    bits_left--;
-                                    acc_solid >>= 1;
-                                } while (bits_left != 0);
-                            }
-
-                            break;
-                        default:
-                            ring_write->solid_bits = acc_solid;
-                            ring_inner[-1] = acc_touch;
-                            *ring_inner = inner_touch;
-                            ring_inner += sizeof(FieldCollisionDilationMasks) / sizeof(u32);
-                            ring_write++;
-
-                            if (row >= (footprint_depth - 1))
-                            {
-                                do
-                                {
-                                    ring_scan = (FieldCollisionDilationMasks*)((u8*)ring_read + ring_row_bytes);
-                                    acc_touch |= ring_read->touch_bits;
-                                    acc_solid |= ring_read->solid_bits;
-
-                                    if (ring_scan >= ring_end)
-                                    {
-                                        ring_scan = (FieldCollisionDilationMasks*)((u8*)ring_scan - ring_bytes);
-                                    }
-                                } while (0);
-
-                                count = footprint_depth - 2;
-
-                                do
-                                {
-                                    entry_touch = ring_scan->touch_bits;
-                                    entry_solid = ring_scan->solid_bits;
-                                    entry_inner = ring_scan->interior_touch_bits;
-                                    ring_scan = (FieldCollisionDilationMasks*)((u8*)ring_scan + ring_row_bytes);
-                                    acc_solid |= entry_solid | entry_inner;
-                                    acc_touch |= entry_touch;
-
-                                    if (ring_scan >= ring_end)
-                                    {
-                                        ring_scan = (FieldCollisionDilationMasks*)((u8*)ring_scan - ring_bytes);
-                                    }
-
-                                    count--;
-                                } while (count != 0);
-
-                                ring_read++;
-
-                                do
-                                {
-                                    if (acc_touch & 1)
-                                    {
-                                        cell = FIELD_COLLISION_TILE_TOUCHED;
-
-                                        if (acc_solid & 1)
-                                        {
-                                            cell = FIELD_COLLISION_TILE_BLOCKED;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        cell = FIELD_COLLISION_TILE_FREE;
-                                    }
-
-                                    *out = cell;
-                                    out++;
-                                    acc_touch >>= 1;
-                                    bits_left--;
-                                    acc_solid >>= 1;
-                                } while (bits_left != 0);
-                            }
-
-                            break;
-                    }
-
-                    if (remaining != 0)
-                    {
-                        in_solid = src_word[0];
-                        in_touch = src_word[1];
-                        src_word += 2;
-
-                        switch (footprint_width - 1)
+                        if (row >= (footprint_depth - 1))
                         {
-                            default:
+                            ring_scan = (FieldCollisionDilationMasks*)((u32*)ring_read + ring_row_words);
+                            acc_touch |= ring_read->touch_bits;
+                            acc_solid |= ring_read->solid_bits;
+
+                            if (ring_scan >= ring_end)
                             {
-                                s32 edge_shift = FIELD_COLLISION_GROUP_WORD_BITS - reach;
-                                s32 inner_shift = FIELD_COLLISION_GROUP_WORD_BITS + 1 - reach;
-                                acc_touch = carry_touch >> edge_shift;
-                                inner_touch = (carry_touch >> inner_shift) | (carry_touch >> (FIELD_COLLISION_GROUP_WORD_BITS + 2 - reach));
-                                shift_touch = inner_touch;
-                                count = (footprint_width - 6) >> 1;
+                                ring_scan = (FieldCollisionDilationMasks*)((u32*)ring_scan - ring_row_words * footprint_depth);
                             }
 
-                                do
-                                {
-                                    shift_touch >>= 2;
-                                    count--;
-                                    inner_touch |= shift_touch;
-                                } while (count != -1);
+                            count = footprint_depth - 2;
 
+                            do
+                            {
+                                entry_touch = ring_scan->touch_bits;
+                                entry_solid = ring_scan->solid_bits;
+                                entry_inner = ring_scan->interior_touch_bits;
+                                ring_scan = (FieldCollisionDilationMasks*)((u32*)ring_scan + ring_row_words);
+                                acc_solid |= entry_solid | entry_inner;
+                                acc_touch |= entry_touch;
+
+                                if (ring_scan >= ring_end)
                                 {
-                                    s32 edge_shift = FIELD_COLLISION_GROUP_WORD_BITS - reach;
-                                    s32 inner_shift = FIELD_COLLISION_GROUP_WORD_BITS + 1 - reach;
-                                    acc_solid = (carry_solid >> edge_shift) | (carry_solid >> inner_shift);
+                                    ring_scan = (FieldCollisionDilationMasks*)((u32*)ring_scan - ring_row_words * footprint_depth);
                                 }
 
-                                shift_solid = acc_solid;
-                                count = (reach - 4) >> 1;
+                                count--;
+                            } while (count != 0);
+
+                            ring_read++;
+
+                            do
+                            {
+                                if (acc_touch & 1)
+                                {
+                                    cell = FIELD_COLLISION_TILE_TOUCHED;
+
+                                    if (acc_solid & 1)
+                                    {
+                                        cell = FIELD_COLLISION_TILE_BLOCKED;
+                                    }
+                                }
+                                else
+                                {
+                                    cell = FIELD_COLLISION_TILE_FREE;
+                                }
+
+                                *out = cell;
+                                out++;
+                                acc_touch >>= 1;
+                                bits_left--;
+                                acc_solid >>= 1;
+                            } while (bits_left != 0);
+                        }
+
+                        break;
+                }
+
+                if (remaining != 0)
+                {
+                    in_solid = src_word[0];
+                    in_touch = src_word[1];
+                    src_word += 2;
+
+                    switch (footprint_width - 1)
+                    {
+                        default:
+                            acc_touch = carry_touch >> (FIELD_COLLISION_GROUP_WORD_BITS - reach);
+                            inner_touch =
+                                (carry_touch >> (FIELD_COLLISION_GROUP_WORD_BITS + 1 - reach)) | (carry_touch >> (FIELD_COLLISION_GROUP_WORD_BITS + 2 - reach));
+                            shift_touch = inner_touch;
+                            count = (footprint_width - 6) >> 1;
+
+                            do
+                            {
+                                shift_touch >>= 2;
+                                count--;
+                                inner_touch |= shift_touch;
+                            } while (count != -1);
+
+                            acc_solid =
+                                (carry_solid >> (FIELD_COLLISION_GROUP_WORD_BITS - reach)) | (carry_solid >> (FIELD_COLLISION_GROUP_WORD_BITS + 1 - reach));
+
+                            shift_solid = acc_solid;
+                            count = (reach - 4) >> 1;
+
+                            do
+                            {
+                                shift_solid >>= 2;
+                                count--;
+                                acc_solid |= shift_solid;
+                            } while (count != -1);
+
+                            if (footprint_width & 1)
+                            {
+                                inner_touch |= carry_touch >> 31;
+                            }
+                            else
+                            {
+                                acc_solid |= carry_solid >> 31;
+                            }
+
+                            if (in_touch != 0)
+                            {
+                                shift_touch = (in_touch * 2) | (in_touch * 4);
+                                inner_touch |= shift_touch;
+                                shift_solid = in_solid | (in_solid * 2);
+                                spread4 = shift_solid * 4;
+                                acc_solid |= shift_solid | spread4;
+                                shift_solid = spread4;
+                                count = (footprint_width - 6) >> 1;
 
                                 do
                                 {
-                                    shift_solid >>= 2;
+                                    shift_touch *= 4;
+                                    inner_touch |= shift_touch;
+                                    shift_solid *= 4;
                                     count--;
                                     acc_solid |= shift_solid;
                                 } while (count != -1);
 
                                 if (footprint_width & 1)
                                 {
-                                    inner_touch |= carry_touch >> 31;
-                                }
-                                else
-                                {
-                                    acc_solid |= carry_solid >> 31;
+                                    inner_touch |= in_touch << (footprint_width - 2);
+                                    acc_solid |= in_solid << reach;
                                 }
 
-                                if (in_touch != 0)
-                                {
-                                    shift_touch = (in_touch * 2) | (in_touch * 4);
-                                    inner_touch |= shift_touch;
-                                    shift_solid = in_solid | (in_solid * 2);
-                                    spread4 = shift_solid * 4;
-                                    acc_solid |= shift_solid | spread4;
-                                    shift_solid = spread4;
-                                    count = (footprint_width - 6) >> 1;
+                                acc_touch |= in_touch | (in_touch << reach);
+                                carry_touch = in_touch;
+                                carry_solid = in_solid;
+                            }
+                            else
+                            {
+                                carry_touch = 0;
+                                carry_solid = 0;
+                            }
 
-                                    do
-                                    {
-                                        shift_touch *= 4;
-                                        inner_touch |= shift_touch;
-                                        shift_solid *= 4;
-                                        count--;
-                                        acc_solid |= shift_solid;
-                                    } while (count != -1);
+                            break;
+                        case 4:
+                            inner_touch = (carry_touch >> 29) | (carry_touch >> 30) | (carry_touch >> 31);
+                            acc_touch = carry_touch >> 28;
+                            shift_solid = (carry_solid >> 28) | (carry_solid >> 29);
+                            acc_solid = shift_solid | (shift_solid >> 2);
 
-                                    if (footprint_width & 1)
-                                    {
-                                        inner_touch |= in_touch << (footprint_width - 2);
-                                        acc_solid |= in_solid << reach;
-                                    }
+                            if (in_touch != 0)
+                            {
+                                left_bits = (in_touch * 2) | (in_touch * 4) | (in_touch * 8);
+                                inner_touch |= left_bits;
+                                acc_touch |= in_touch | (in_touch * 0x10);
+                                shift_solid = in_solid | (in_solid * 2);
+                                spill_bits = shift_solid * 4;
+                                spread_solid = shift_solid | spill_bits;
+                                left_bits = in_solid * 0x10;
+                                spread_solid |= left_bits;
+                                acc_solid |= spread_solid;
+                                carry_touch = in_touch;
+                                carry_solid = in_solid;
+                            }
+                            else
+                            {
+                                carry_touch = 0;
+                                carry_solid = 0;
+                            }
 
-                                    acc_touch |= in_touch | (in_touch << reach);
-                                    carry_touch = in_touch;
-                                    carry_solid = in_solid;
-                                }
-                                else
-                                {
-                                    carry_touch = 0;
-                                    carry_solid = 0;
-                                }
+                            break;
+                        case 3:
+                            inner_touch = (carry_touch >> 30) | (carry_touch >> 31);
+                            acc_touch = carry_touch >> 29;
+                            left_bits = (carry_solid >> 29) | (carry_solid >> 30);
+                            carry_solid = carry_solid >> 31;
+                            acc_solid = left_bits | (carry_solid & 1);
 
-                                break;
-                            case 4:
-                                inner_touch = (carry_touch >> 29) | (carry_touch >> 30) | (carry_touch >> 31);
-                                acc_touch = carry_touch >> 28;
-                                shift_solid = (carry_solid >> 28) | (carry_solid >> 29);
-                                acc_solid = shift_solid | (shift_solid >> 2);
+                            if (in_touch != 0)
+                            {
+                                left_bits = (in_touch * 2) | (in_touch * 4);
+                                inner_touch |= left_bits;
+                                acc_touch |= in_touch | (in_touch * 8);
+                                shift_solid = in_solid | (in_solid * 2);
+                                spread_solid = shift_solid | (shift_solid * 4);
+                                acc_solid |= spread_solid;
+                                carry_touch = in_touch;
+                                carry_solid = in_solid;
+                            }
+                            else
+                            {
+                                carry_touch = 0;
+                                carry_solid = 0;
+                            }
 
-                                if (in_touch != 0)
-                                {
-                                    left_bits = (in_touch * 2) | (in_touch * 4) | (in_touch * 8);
-                                    inner_touch |= left_bits;
-                                    acc_touch |= in_touch | (in_touch * 0x10);
-                                    shift_solid = in_solid | (in_solid * 2);
-                                    spill_bits = shift_solid * 4;
-                                    spread_solid = shift_solid | spill_bits;
-                                    left_bits = in_solid * 0x10;
-                                    spread_solid |= left_bits;
-                                    acc_solid |= spread_solid;
-                                    carry_touch = in_touch;
-                                    carry_solid = in_solid;
-                                }
-                                else
-                                {
-                                    carry_touch = 0;
-                                    carry_solid = 0;
-                                }
+                            break;
+                        case 2:
+                            inner_touch = carry_touch >> 31;
+                            acc_touch = carry_touch >> 30;
+                            acc_solid = (carry_solid >> 30) | (carry_solid >> 31);
 
-                                break;
-                            case 3:
-                                inner_touch = (carry_touch >> 30) | (carry_touch >> 31);
-                                acc_touch = carry_touch >> 29;
-                                left_bits = (carry_solid >> 29) | (carry_solid >> 30);
-                                carry_solid = carry_solid >> 31;
-                                acc_solid = left_bits | (carry_solid & 1);
+                            if (in_touch != 0)
+                            {
+                                inner_touch |= in_touch * 2;
+                                acc_touch |= in_touch | (in_touch * 4);
+                                spill_bits = in_solid * 2;
+                                spread_solid = in_solid | spill_bits;
+                                left_bits = in_solid * 4;
+                                spread_solid |= left_bits;
+                                acc_solid |= spread_solid;
+                                carry_touch = in_touch;
+                                carry_solid = in_solid;
+                            }
+                            else
+                            {
+                                carry_touch = 0;
+                                carry_solid = 0;
+                            }
 
-                                if (in_touch != 0)
-                                {
-                                    left_bits = (in_touch * 2) | (in_touch * 4);
-                                    inner_touch |= left_bits;
-                                    acc_touch |= in_touch | (in_touch * 8);
-                                    shift_solid = in_solid | (in_solid * 2);
-                                    spread_solid = shift_solid | (shift_solid * 4);
-                                    acc_solid |= spread_solid;
-                                    carry_touch = in_touch;
-                                    carry_solid = in_solid;
-                                }
-                                else
-                                {
-                                    carry_touch = 0;
-                                    carry_solid = 0;
-                                }
+                            break;
+                        case 1:
+                            acc_touch = carry_touch >> 31;
+                            acc_solid = carry_solid >> 31;
 
-                                break;
-                            case 2:
-                                inner_touch = carry_touch >> 31;
-                                acc_touch = carry_touch >> 30;
-                                acc_solid = (carry_solid >> 30) | (carry_solid >> 31);
+                            if (in_touch != 0)
+                            {
+                                acc_touch |= in_touch | (in_touch * 2);
+                                spread_solid = in_solid | (in_solid * 2);
+                                acc_solid |= spread_solid;
+                                carry_touch = in_touch;
+                                carry_solid = in_solid;
+                            }
+                            else
+                            {
+                                carry_touch = 0;
+                                carry_solid = 0;
+                            }
 
-                                if (in_touch != 0)
-                                {
-                                    inner_touch |= in_touch * 2;
-                                    acc_touch |= in_touch | (in_touch * 4);
-                                    spill_bits = in_solid * 2;
-                                    spread_solid = in_solid | spill_bits;
-                                    left_bits = in_solid * 4;
-                                    spread_solid |= left_bits;
-                                    acc_solid |= spread_solid;
-                                    carry_touch = in_touch;
-                                    carry_solid = in_solid;
-                                }
-                                else
-                                {
-                                    carry_touch = 0;
-                                    carry_solid = 0;
-                                }
-
-                                break;
-                            case 1:
-                                acc_touch = carry_touch >> 31;
-                                acc_solid = carry_solid >> 31;
-
-                                if (in_touch != 0)
-                                {
-                                    acc_touch |= in_touch | (in_touch * 2);
-                                    spread_solid = in_solid | (in_solid * 2);
-                                    acc_solid |= spread_solid;
-                                    carry_touch = in_touch;
-                                    carry_solid = in_solid;
-                                }
-                                else
-                                {
-                                    carry_touch = 0;
-                                    carry_solid = 0;
-                                }
-
-                                break;
-                            case 0:
-                                acc_solid = in_solid;
-                                acc_touch = in_touch;
-                                break;
-                        }
-
-                        bits_left = word_bits;
-
-                        if (remaining != 0)
-                        {
-                            goto next_word;
-                        }
+                            break;
+                        case 0:
+                            acc_solid = in_solid;
+                            acc_touch = in_touch;
+                            break;
                     }
-                }
 
-                if (row >= (footprint_depth - 1))
+                    bits_left = FIELD_COLLISION_GROUP_WORD_BITS;
+                }
+            }
+
+            if (row >= (footprint_depth - 1))
+            {
+                for (remaining = footprint_width; remaining != -1; remaining--)
                 {
-                    for (remaining = footprint_width; remaining != -1; remaining--)
-                    {
-                        *out = FIELD_COLLISION_TILE_BLOCKED;
-                        out++;
-                    }
+                    *out = FIELD_COLLISION_TILE_BLOCKED;
+                    out++;
                 }
-
-                row++;
-                rows_left--;
-            } while (rows_left != -1);
+            }
         }
 
         remaining = scene->tile_cols * (footprint_depth + 1);
