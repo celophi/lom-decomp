@@ -6419,62 +6419,32 @@ u8* field_render_effect_fan(FieldMotionRecord* effect, u8* packet_cursor, s32* o
     VECTOR transformed;
     MATRIX matrix;
     FieldObjectPart* part;
-    s32 first_half_angle;
-    SVECTOR* direction_ptr;
-    VECTOR* transformed_ptr;
-    s32 half_angle;
-    s32 angle;
-    s32 next_angle;
-    s16 inner_end_y;
-    s16 middle_end_x;
-    s16 inner_end_x;
-    FieldGouraudTriangle* next_packet;
     FieldActorSlot* actor;
-    FieldActorSlot* slots;
-    s32* first_entry;
-    s32* second_entry;
-    s32* third_entry;
-    s32* fourth_entry;
-    s32 half_step;
-    s32 next_color;
-    s32 angle_quotient;
-    s16 angle_short;
-    s32 middle_angle;
-    s32 outer_next_angle;
-    s32 packed_color;
-    s32 ot_word;
-    s32 second_depth;
-    s32 third_depth;
-    s32 fourth_depth;
-    s32 packet_tag;
-    s32 depth_or_y;
-    s32 angle_step;
-    s32 segment;
-    u16 center_y;
-    u16 offset_y;
-    s32 inner_last_segment;
-    s32 middle_last_segment;
-    s32 outer_last_segment;
-    s32 mask_low;
-    s32 mask_high;
-    u16 segment_count;
+    FieldGouraudTriangle* packets;
+    FieldGouraudTriangle* second_triangle;
     FieldGouraudTriangle* third_triangle;
     FieldGouraudTriangle* fourth_triangle;
-    FieldGouraudTriangle* second_triangle;
-    FieldGouraudTriangle* packets;
-    FieldObjectPart* selected_part;
+    FieldGouraudTriangle* next_packet;
+    s32 segment_count;
+    s32 segment;
+    s32 quotient;
+    s32 angle_step;
+    s32 half_step;
+    s32 next_half_angle;
+    s32 color;
+    s32 tag;
+    s32 depth;
+    s16 x;
+    s16 y;
 
     packets = (FieldGouraudTriangle*)packet_cursor;
-    slots = g_field_actor_slots;
-    actor = &slots[effect->owner_slot];
-    selected_part = &actor->parts[effect->owner_part];
-    part = selected_part;
+    part = &g_field_actor_slots[effect->owner_slot].parts[effect->owner_part];
+    actor = &g_field_actor_slots[effect->owner_slot];
     field_build_effect_part_matrix(effect, part, &matrix, actor);
     gte_SetRotMatrix(&matrix);
 
-    screen_origin.vx = (u16)((g_field_view_offset_x / 256) + ((effect->x / 256) + FIELD_SCREEN_CENTER_X));
-    screen_origin.vy =
-        (u16)(((((g_field_view_offset_y / 256) + FIELD_SCREEN_CENTER_Y) + (effect->y / 256)) - (effect->z / 512)) - (g_field_view_offset_z / 512));
+    screen_origin.vx = FIELD_SCREEN_X(effect->x);
+    screen_origin.vy = FIELD_SCREEN_Y(effect->y, effect->z);
     field_resolve_effect_part_color(actor, effect, part, &packets->color0);
     setPolyG3(packets);
     setSemiTrans(packets, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
@@ -6486,249 +6456,200 @@ u8* field_render_effect_fan(FieldMotionRecord* effect, u8* packet_cursor, s32* o
         segment_count = part->effect_animation_active;
     }
 
-    angle_quotient = ONE / segment_count;
-    angle_short = angle_quotient;
-    angle_step = angle_short;
+    quotient = ONE / segment_count;
+    angle_step = quotient;
 
     if ((ONE % segment_count) != 0)
     {
         angle_step++;
     }
 
-    segment = 0;
-    direction_ptr = &direction;
-    transformed_ptr = &transformed;
-    mask_low = FIELD_GPU_ADDRESS_MASK;
-    mask_high = FIELD_GPU_LENGTH_MASK;
-    half_step = angle_quotient >> 1;
-    first_half_angle = half_step;
-    angle_short = half_step;
-    half_angle = angle_short;
-    angle = 0;
-    next_angle = angle_step;
-next_segment:
-{
-    /* Copy the two screen coordinates as one GPU word. */
-    packets[0].xy1.word = *(s32*)&screen_origin;
-    field_set_fan_direction(&direction, angle, 8);
-    gte_ldv0(direction_ptr);
-    gte_rtv0();
-    gte_stlvnl(transformed_ptr);
+    half_step = quotient >> 1;
+
+    for (segment = 0;; segment++)
     {
-        u32 coordinate;
-        u16 offset;
-        coordinate = (u16)screen_origin.vx;
-        offset = (u16)transformed.vx;
-        coordinate += offset;
-        packets[0].xy0.signed_pair.x = coordinate;
-        packets[1].xy0.signed_pair.x = coordinate;
-        coordinate = (u16)screen_origin.vy;
-        offset = (u16)transformed.vy;
-        coordinate += offset;
-        inner_last_segment = segment_count - 1;
-        packets[0].xy0.signed_pair.y = coordinate;
-        packets[1].xy0.signed_pair.y = coordinate;
+        /* Copy the two screen coordinates as one GPU word. */
+        packets[0].xy1.word = *(s32*)&screen_origin;
+        field_set_fan_direction(&direction, segment * angle_step, 8);
+        gte_ldv0(&direction);
+        gte_rtv0();
+        gte_stlvnl(&transformed);
+        x = screen_origin.vx + transformed.vx;
+        packets[0].xy0.signed_pair.x = x;
+        packets[1].xy0.signed_pair.x = x;
+        y = screen_origin.vy + transformed.vy;
+        packets[0].xy0.signed_pair.y = y;
+        packets[1].xy0.signed_pair.y = y;
+
+        if (segment == segment_count - 1)
+        {
+            field_set_fan_direction(&direction, 0, 8);
+        }
+        else
+        {
+            field_set_fan_direction(&direction, (segment + 1) * angle_step, 8);
+        }
+
+        gte_ldv0(&direction);
+        gte_rtv0();
+        gte_stlvnl(&transformed);
+        second_triangle = &packets[1];
+        fourth_triangle = &packets[3];
+        x = screen_origin.vx + transformed.vx;
+        packets[0].xy2.signed_pair.x = x;
+        second_triangle[0].xy2.signed_pair.x = x;
+        fourth_triangle[0].xy0.signed_pair.x = x;
+        packets[2].xy0.signed_pair.x = x;
+        y = screen_origin.vy + transformed.vy;
+        packets[0].xy2.signed_pair.y = y;
+        second_triangle[0].xy2.signed_pair.y = y;
+        fourth_triangle[0].xy0.signed_pair.y = y;
+        packets[2].xy0.signed_pair.y = y;
+        field_set_fan_direction(&direction, half_step + segment * angle_step, 6);
+        gte_ldv0(&direction);
+        gte_rtv0();
+        gte_stlvnl(&transformed);
+        x = screen_origin.vx + transformed.vx;
+        second_triangle[0].xy1.signed_pair.x = x;
+        packets[2].xy1.signed_pair.x = x;
+        y = screen_origin.vy + transformed.vy;
+        second_triangle[0].xy1.signed_pair.y = y;
+        packets[2].xy1.signed_pair.y = y;
+
+        if (segment == segment_count - 1)
+        {
+            field_set_fan_direction(&direction, 0, 7);
+        }
+        else
+        {
+            field_set_fan_direction(&direction, segment * angle_step + angle_step, 7);
+        }
+
+        gte_ldv0(&direction);
+        gte_rtv0();
+        gte_stlvnl(&transformed);
+        third_triangle = &packets[2];
+        x = screen_origin.vx + transformed.vx;
+        third_triangle[0].xy2.signed_pair.x = x;
+        packets[3].xy1.signed_pair.x = x;
+        y = screen_origin.vy + transformed.vy;
+        third_triangle[0].xy2.signed_pair.y = y;
+        packets[3].xy1.signed_pair.y = y;
+
+        if (segment == segment_count - 1)
+        {
+            field_set_fan_direction(&direction, half_step, 6);
+        }
+        else
+        {
+            next_half_angle = half_step + segment * angle_step + angle_step;
+            field_set_fan_direction(&direction, next_half_angle, 6);
+        }
+
+        gte_ldv0(&direction);
+        gte_rtv0();
+        gte_stlvnl(&transformed);
+        x = screen_origin.vx + transformed.vx;
+        packets[3].xy2.signed_pair.x = x;
+        color = packets[0].color0.signed_word;
+        y = screen_origin.vy + transformed.vy;
+        tag = packets[0].tag;
+        packets[3].color2.signed_word = 0;
+        packets[3].color1.signed_word = 0;
+        packets[3].color0.signed_word = color;
+        packets[2].color2.signed_word = 0;
+        packets[2].color1.signed_word = 0;
+        packets[2].color0.signed_word = color;
+        packets[0].color1.signed_word = color;
+        packets[1].color2.signed_word = color;
+        packets[1].color1.signed_word = 0;
+        packets[1].color0.signed_word = color;
+        packets[0].color2.signed_word = color;
+        packets[1].tag = tag;
+        packets[2].tag = tag;
+        packets[3].tag = tag;
+        packets[4].tag = tag;
+        packets[4].color0.signed_word = packets[0].color0.signed_word;
+        packets[3].xy2.signed_pair.y = y;
+        depth = effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
+        next_packet = &packets[1];
+
+        if (depth < 0)
+        {
+            addPrim(&ordering_table[0], packets);
+            packets = next_packet;
+        }
+        else if (depth >= FIELD_WORLD_OT_SIZE)
+        {
+            addPrim(&ordering_table[FIELD_WORLD_OT_LAST], packets);
+            packets = next_packet;
+        }
+        else
+        {
+            addPrim(&ordering_table[effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT], packets);
+            packets = next_packet;
+        }
+
+        depth = effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
+
+        if (depth < 0)
+        {
+            addPrim(&ordering_table[0], packets);
+            packets++;
+        }
+        else if (depth >= FIELD_WORLD_OT_SIZE)
+        {
+            addPrim(&ordering_table[FIELD_WORLD_OT_LAST], packets);
+            packets++;
+        }
+        else
+        {
+            addPrim(&ordering_table[effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT], packets);
+            packets++;
+        }
+
+        depth = effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
+
+        if (depth < 0)
+        {
+            addPrim(&ordering_table[0], packets);
+            packets++;
+        }
+        else if (depth >= FIELD_WORLD_OT_SIZE)
+        {
+            addPrim(&ordering_table[FIELD_WORLD_OT_LAST], packets);
+            packets++;
+        }
+        else
+        {
+            addPrim(&ordering_table[effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT], packets);
+            packets++;
+        }
+
+        depth = effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
+
+        if (depth < 0)
+        {
+            addPrim(&ordering_table[0], packets);
+            packets++;
+        }
+        else if (depth >= FIELD_WORLD_OT_SIZE)
+        {
+            addPrim(&ordering_table[FIELD_WORLD_OT_LAST], packets);
+            packets++;
+        }
+        else
+        {
+            addPrim(&ordering_table[effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT], packets);
+            packets++;
+        }
+
+        if (segment == segment_count - 1)
+        {
+            break;
+        }
     }
 
-    if (segment == inner_last_segment)
-    {
-        field_set_fan_direction(&direction, 0, 8);
-    }
-    else
-    {
-        field_set_fan_direction(&direction, next_angle, 8);
-    }
-
-    gte_ldv0(direction_ptr);
-    gte_rtv0();
-    gte_stlvnl(transformed_ptr);
-    second_triangle = &packets[1];
-    fourth_triangle = &packets[3];
-    inner_end_x = screen_origin.vx + (u16)transformed.vx;
-    packets[0].xy2.signed_pair.x = inner_end_x;
-    second_triangle[0].xy2.signed_pair.x = inner_end_x;
-    fourth_triangle[0].xy0.signed_pair.x = inner_end_x;
-    packets[2].xy0.signed_pair.x = inner_end_x;
-    inner_end_y = screen_origin.vy + (u16)transformed.vy;
-    packets[0].xy2.signed_pair.y = inner_end_y;
-    second_triangle[0].xy2.signed_pair.y = inner_end_y;
-    fourth_triangle[0].xy0.signed_pair.y = inner_end_y;
-    packets[2].xy0.signed_pair.y = inner_end_y;
-    field_set_fan_direction(&direction, half_angle, 6);
-    gte_ldv0(direction_ptr);
-    gte_rtv0();
-    gte_stlvnl(transformed_ptr);
-    {
-        u32 coordinate;
-        u16 offset;
-        coordinate = (u16)screen_origin.vx;
-        offset = (u16)transformed.vx;
-        coordinate += offset;
-        second_triangle[0].xy1.signed_pair.x = coordinate;
-        packets[2].xy1.signed_pair.x = coordinate;
-        coordinate = (u16)screen_origin.vy;
-        offset = (u16)transformed.vy;
-        coordinate += offset;
-        middle_last_segment = segment_count - 1;
-        second_triangle[0].xy1.signed_pair.y = coordinate;
-        packets[2].xy1.signed_pair.y = coordinate;
-    }
-
-    if (segment == middle_last_segment)
-    {
-        field_set_fan_direction(&direction, 0, 7);
-    }
-    else
-    {
-        middle_angle = angle + angle_step;
-        field_set_fan_direction(&direction, middle_angle, 7);
-    }
-
-    gte_ldv0(direction_ptr);
-    gte_rtv0();
-    gte_stlvnl(transformed_ptr);
-    third_triangle = &packets[2];
-    middle_end_x = screen_origin.vx + (u16)transformed.vx;
-    third_triangle[0].xy2.signed_pair.x = middle_end_x;
-    packets[3].xy1.signed_pair.x = middle_end_x;
-    depth_or_y = (u16)screen_origin.vy + (u16)transformed.vy;
-    outer_last_segment = segment_count - 1;
-    third_triangle[0].xy2.signed_pair.y = depth_or_y;
-    packets[3].xy1.signed_pair.y = depth_or_y;
-
-    if (segment == outer_last_segment)
-    {
-        field_set_fan_direction(&direction, first_half_angle, 6);
-    }
-    else
-    {
-        outer_next_angle = half_angle + angle_step;
-        field_set_fan_direction(&direction, outer_next_angle, 6);
-    }
-
-    gte_ldv0(direction_ptr);
-    gte_rtv0();
-    gte_stlvnl(transformed_ptr);
-    packets[3].xy2.signed_pair.x = (s16)(screen_origin.vx + (u16)transformed.vx);
-    packed_color = packets[0].color0.signed_word;
-    center_y = screen_origin.vy;
-    offset_y = (u16)transformed.vy;
-    packet_tag = packets[0].tag;
-    packets[3].color2.signed_word = 0;
-    packets[3].color1.signed_word = 0;
-    packets[2].color2.signed_word = 0;
-    packets[2].color1.signed_word = 0;
-    packets[1].color1.signed_word = 0;
-    next_color = packets[0].color0.signed_word;
-    packets[3].color0.signed_word = packed_color;
-    packets[2].color0.signed_word = packed_color;
-    packets[0].color1.signed_word = packed_color;
-    packets[1].color2.signed_word = packed_color;
-    packets[1].color0.signed_word = packed_color;
-    packets[0].color2.signed_word = packed_color;
-    packets[1].tag = packet_tag;
-    packets[2].tag = packet_tag;
-    packets[3].tag = packet_tag;
-    packets[4].tag = packet_tag;
-    packets[4].color0.signed_word = next_color;
-    packets[3].xy2.signed_pair.y = (s16)(center_y + offset_y);
-    depth_or_y = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
-    next_packet = &packets[1];
-
-    if (depth_or_y < 0)
-    {
-        FIELD_LINK_PACKET(&ordering_table[0], packets, mask_low, mask_high);
-        packets = next_packet;
-    }
-    else if (depth_or_y >= FIELD_WORLD_OT_SIZE)
-    {
-        FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_LAST], packets, mask_low, mask_high);
-        packets = next_packet;
-    }
-    else
-    {
-        packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[depth_or_y] & mask_low);
-        first_entry = FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT);
-        ot_word = *first_entry;
-        *first_entry = (ot_word & mask_high) | ((uintptr_t)packets & mask_low);
-        packets = next_packet;
-    }
-
-    second_depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
-
-    if (second_depth < 0)
-    {
-        FIELD_LINK_PACKET(&ordering_table[0], packets, mask_low, mask_high);
-        packets++;
-    }
-    else if (second_depth >= FIELD_WORLD_OT_SIZE)
-    {
-        FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_LAST], packets, mask_low, mask_high);
-        packets++;
-    }
-    else
-    {
-        packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[second_depth] & mask_low);
-        second_entry = FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT);
-        ot_word = *second_entry;
-        *second_entry = (ot_word & mask_high) | ((uintptr_t)packets & mask_low);
-        packets++;
-    }
-
-    third_depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
-
-    if (third_depth < 0)
-    {
-        FIELD_LINK_PACKET(&ordering_table[0], packets, mask_low, mask_high);
-        packets++;
-    }
-    else if (third_depth >= FIELD_WORLD_OT_SIZE)
-    {
-        FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_LAST], packets, mask_low, mask_high);
-        packets++;
-    }
-    else
-    {
-        packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[third_depth] & mask_low);
-        third_entry = FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT);
-        ot_word = *third_entry;
-        *third_entry = (ot_word & mask_high) | ((uintptr_t)packets & mask_low);
-        packets++;
-    }
-
-    fourth_depth = (s32)effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
-
-    if (fourth_depth < 0)
-    {
-        FIELD_LINK_PACKET(&ordering_table[0], packets, mask_low, mask_high);
-        packets++;
-    }
-    else if (fourth_depth >= FIELD_WORLD_OT_SIZE)
-    {
-        FIELD_LINK_PACKET(&ordering_table[FIELD_WORLD_OT_LAST], packets, mask_low, mask_high);
-        packets++;
-    }
-    else
-    {
-        packets[0].tag = (packets[0].tag & mask_high) | (ordering_table[fourth_depth] & mask_low);
-        fourth_entry = FIELD_ELEMENT_AT(s32, ordering_table, effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT);
-        ot_word = *fourth_entry;
-        *fourth_entry = (ot_word & mask_high) | ((uintptr_t)packets & mask_low);
-        packets++;
-    }
-
-    if (segment == (segment_count - 1))
-    {
-        goto finished;
-    }
-
-    segment++;
-    half_angle += angle_step;
-    angle += angle_step;
-    next_angle += angle_step;
-    goto next_segment;
-}
-finished:
     return field_emit_effect_texture_page(effect, part, (u8*)packets, ordering_table);
 }
 
