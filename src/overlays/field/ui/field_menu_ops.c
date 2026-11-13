@@ -112,9 +112,6 @@
 /** @brief Size of a land record (field_records.h FieldLandRecord). */
 #define FIELD_LAND_RECORD_SIZE sizeof(FieldLandRecord)
 
-/** @brief Game-state offset of land 0's element levels (SavedGameLayout lands[0].levels). */
-#define FIELD_LAND_LEVELS_OFFSET OFFSETOF(SavedGameLayout, lands[0].levels)
-
 /** @brief Weight of each element in field_menu_draw_land_element's uniform mode (3^4). */
 #define FIELD_ELEMENT_UNIFORM_WEIGHT 81
 
@@ -370,13 +367,6 @@ typedef struct
 {
     s32 elements[8];
 } FieldFavoredElementTable;
-
-/** @brief One local that holds the game-state view, then the chosen element. */
-typedef union
-{
-    SavedGameLayout* view;
-    s32 element;
-} FieldViewOrElement;
 
 /** @brief Element table indexed by element: entry e is the element paired with e (0-8). */
 typedef struct
@@ -3115,97 +3105,87 @@ void field_menu_draw_land_element(void)
 {
     s32 weights[FIELD_LAND_SPIRIT_COUNT];
     FieldFavoredElementTable favored;
-    s32 total, i, land_offset, level, weight, draw;
-    FieldViewOrElement work;
-    s32* cursor;
-    s32* base;
-    s32* weight_slot;
-    s32 land, product;
+    s32 total, i, land_offset, level, clamped, weight, draw, element;
+    SavedGameLayout* view;
     s32 mode;
 
     total = 0;
-    i = total;
-    work.view = &g_saved_game.layout;
+    i = 0;
+    view = &g_saved_game.layout;
     mode = g_field_runtime_context.locals.bytes[0];
-    land = g_current_land;
+    land_offset = g_current_land * FIELD_LAND_RECORD_SIZE;
     favored = g_field_weekday_favored_elements;
-    land_offset = land * FIELD_LAND_RECORD_SIZE;
-next_weight:
-    level = ((u8*)work.view)[i + land_offset + FIELD_LAND_LEVELS_OFFSET];
-    weight = level - 3;
 
-    if (i == favored.elements[work.view->control.fields.weekday & FIELD_WEEKDAY_MASK])
+    while (i < FIELD_LAND_SPIRIT_COUNT)
     {
-        weight = level - 2;
-    }
+        level = *(view->lands[0].levels + (i + land_offset));
+        weight = level - 3;
 
-    if (weight >= 0)
-    {
-        level = 3;
-
-        if (weight < 4)
+        if (i == favored.elements[view->control.fields.weekday & FIELD_WEEKDAY_MASK])
         {
-            level = weight;
+            weight++;
+        }
+
+        if (weight >= 0)
+        {
+            clamped = 3;
+
+            if (weight < 4)
+            {
+                clamped = weight;
+            }
+        }
+        else
+        {
+            clamped = 0;
+        }
+
+        weight = clamped * clamped;
+        weight *= weight;
+        weights[i] = weight;
+        total += weight;
+        i++;
+
+        if (i >= FIELD_LAND_SPIRIT_COUNT)
+        {
+            if (mode == 1)
+            {
+                total = FIELD_ELEMENT_UNIFORM_TOTAL;
+            }
+
+            draw = rand() * total / FIELD_ELEMENT_RANDOM_RANGE;
         }
     }
-    else
-    {
-        level = 0;
-    }
-
-    weight = level * level;
-    weight = weight * weight;
-    weight_slot = &weights[i];
-    i++;
-    base = weights;
-    *weight_slot = weight;
-    total += weight;
-
-    if (i < FIELD_LAND_SPIRIT_COUNT)
-    {
-        goto next_weight;
-    }
-
-    if (mode == 1)
-    {
-        total = FIELD_ELEMENT_UNIFORM_TOTAL;
-    }
-
-    product = rand() * total;
-    draw = product / FIELD_ELEMENT_RANDOM_RANGE;
 
     total = 0;
-    work.element = FIELD_NO_ELEMENT;
+    element = FIELD_NO_ELEMENT;
 
-    for (i = 0, cursor = base; i < FIELD_LAND_SPIRIT_COUNT; i++, cursor++)
+    for (i = 0; i < FIELD_LAND_SPIRIT_COUNT; i++)
     {
-        if (draw >= total && draw < total + *cursor)
+        if (draw >= total && draw < total + weights[i])
         {
-            goto found;
+            element = i;
+            break;
         }
 
         if (mode == 0)
         {
-            total += *cursor;
+            total += weights[i];
         }
         else
         {
             total += FIELD_ELEMENT_UNIFORM_WEIGHT;
         }
     }
-store:
-    if (mode != 0)
-    {
-        goto store_uniform;
-    }
 
-    FIELD_LOCAL_BYTE(FIELD_DRAWN_ELEMENT) = work.element;
-    return;
-found:
-    work.element = i;
-    goto store;
-store_uniform:
-    FIELD_LOCAL_BYTE(FIELD_UNIFORM_ELEMENT) = work.element;
+    if (mode == 0)
+    {
+        FIELD_LOCAL_BYTE(FIELD_DRAWN_ELEMENT) = element;
+    }
+    else
+    {
+        FIELD_LOCAL_BYTE(FIELD_UNIFORM_ELEMENT) = element;
+    }
 }
 
 /** @brief Open the GOSUB instrument screen, then its confirmation dialog. */
