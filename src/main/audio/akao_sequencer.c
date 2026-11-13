@@ -489,7 +489,6 @@ s32 akao_seq_tick_channels(AkaoChannelState* channels, s32 is_secondary)
     s32 channel_bit;
     AkaoChannelState* channel;
     s32 remaining_channels;
-    AkaoDriverFlags* driver_flags;
 
     tempo_step = g_akao_seq_channel0->tempo >> AKAO_Q16_SHIFT;
     tempo_scale = g_akao_master_tempo_modifier;
@@ -512,12 +511,10 @@ s32 akao_seq_tick_channels(AkaoChannelState* channels, s32 is_secondary)
     {
         g_akao_seq_channel0->tempo_acc &= AKAO_LOW_HALF_MASK;
 
-        driver_flags = &g_akao_driver_flags;
-        channel = channels;
-
         /* The primary song can catch up through several measures in this pass. */
         do
         {
+            channel = channels;
             channel_bit = 1;
             remaining_channels = g_akao_seq_channel0->masks.active_mask;
 
@@ -553,20 +550,9 @@ s32 akao_seq_tick_channels(AkaoChannelState* channels, s32 is_secondary)
 
             if (g_akao_seq_channel0->reverb_depth_fade_ticks != 0)
             {
-                u32 pending_updates;
-
                 g_akao_seq_channel0->reverb_depth_fade_ticks--;
                 g_akao_seq_channel0->reverb_depth += g_akao_seq_channel0->reverb_depth_step;
-
-                do
-                {
-                    pending_updates = driver_flags->update_flags;
-                } while (0);
-
-                if (is_secondary == 0)
-                {
-                    driver_flags->update_flags = pending_updates | AKAO_REVERB_DEPTH_UPDATE_PENDING;
-                }
+                g_akao_driver_flags.update_flags |= (is_secondary == 0) ? AKAO_REVERB_DEPTH_UPDATE_PENDING : 0;
             }
 
             if (g_akao_seq_channel0->ticks_per_beat != 0)
@@ -590,14 +576,7 @@ s32 akao_seq_tick_channels(AkaoChannelState* channels, s32 is_secondary)
                     }
                 }
             }
-
-            if (is_secondary != 0)
-            {
-                break;
-            }
-
-            channel = channels;
-        } while (g_akao_seq_pending_ticks != 0);
+        } while ((is_secondary == 0) && (g_akao_seq_pending_ticks != 0));
     }
 
     return g_akao_seq_channel0->masks.active_mask;
