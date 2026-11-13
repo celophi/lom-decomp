@@ -2919,8 +2919,6 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
             }
             else
             {
-                s32 position_z;
-                s32 position_x;
                 /* Advance the packed context during a collision attempt; protocol remains unresolved. */
                 g_field_action_context += 0x100;
                 mover->x = record->x;
@@ -2934,6 +2932,7 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                 mover->height_bias = FIELD_FOOTPRINT_STEP;
                 mover->collision_node = initial_surface;
                 mover->flags = 0;
+                mover->mode.bits.footprint_depth = FIELD_FOOTPRINT_LARGE_DEPTH;
                 mover->mode.bits.airborne_high = 0;
                 mover->mode.bits.airborne_low = 0;
 
@@ -2949,21 +2948,12 @@ static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPar
                 }
                 else if (!(part->spawn_flags.word & FIELD_PART_RETIRE_ON_COLLISION))
                 {
-                    position_x = mover->x;
                     query->width = FIELD_FOOTPRINT_LARGE_WIDTH;
                     query->height_tolerance = FIELD_FOOTPRINT_STEP;
-
-                    do
-                    {
-                        query->depth = FIELD_FOOTPRINT_LARGE_DEPTH;
-                    } while (0);
-                    query->x = position_x;
-                    position_z = mover->z;
-                    {
-                        s32 query_y = record->y;
-                        query->z = position_z;
-                        query->y = query_y;
-                    }
+                    query->depth = FIELD_FOOTPRINT_LARGE_DEPTH;
+                    query->x = mover->x;
+                    query->y = record->y;
+                    query->z = mover->z;
 
                     if ((g_field_active_group != 0) && (field_collision_hit_markers(query) != FIELD_COLLISION_MARKER_NONE))
                     {
