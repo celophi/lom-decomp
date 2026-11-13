@@ -148,6 +148,8 @@ typedef union
 
 /** @brief FieldMovementWord bits holding the running action sequence (0, 0x800 or 0x1000). */
 #define FIELD_MOVEMENT_SEQUENCE_MASK 0x1800
+/** @brief Bit position of FIELD_MOVEMENT_SEQUENCE_MASK; shifts its values into FieldMovementWord bits.sequence. */
+#define FIELD_MOVEMENT_SEQUENCE_SHIFT 11
 /** @brief FIELD_MOVEMENT_SEQUENCE_MASK value: an effect started the object's action animation without a contact. */
 #define FIELD_MOVEMENT_SEQUENCE_LAUNCHED 0x800
 /** @brief FIELD_MOVEMENT_SEQUENCE_MASK value: an effect contact resolved the object's pending action. */
