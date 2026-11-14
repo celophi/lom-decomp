@@ -121,25 +121,21 @@ void field_upload_player_icons(void)
  */
 void* field_draw_player_icon(POLY_FT4* handle, u_long* ordering_table, s32 selector, s32 x, s32 y, s32 flip)
 {
-    POLY_FT4* icon;
     POLY_FT4* prim;
     POLY_FT4* source;
     DR_TPAGE* draw_mode;
     u8 u_value;
 
-    icon = handle;
     prim = handle;
-    prim++;
-    prim--;
-    SET_BGR0_PACKED(icon, GPU_TINT_NEUTRAL);
-    icon->x0 = x;
-    setPolyFT4(icon);
-    icon->x2 = icon->x0;
-    icon->x1 = icon->x3 = icon->x0 + FIELD_PLAYER_ICON_EXTENT;
-    icon->y0 = y;
-    icon->y1 = y;
-    icon->y2 = icon->y3 = icon->y0 + FIELD_PLAYER_ICON_EXTENT;
-    icon->u0 = (selector == FIELD_PLAYER_ICON_THIRD) ? FIELD_PLAYER_ICON_THIRD_U : FIELD_PLAYER_ICON_U;
+    SET_BGR0_PACKED(handle, GPU_TINT_NEUTRAL);
+    handle->x0 = x;
+    setPolyFT4(handle);
+    handle->x2 = handle->x0;
+    handle->x1 = handle->x3 = handle->x0 + FIELD_PLAYER_ICON_EXTENT;
+    handle->y0 = y;
+    handle->y1 = y;
+    handle->y2 = handle->y3 = handle->y0 + FIELD_PLAYER_ICON_EXTENT;
+    handle->u0 = (selector == FIELD_PLAYER_ICON_THIRD) ? FIELD_PLAYER_ICON_THIRD_U : FIELD_PLAYER_ICON_U;
 
     prim->v0 = (selector == FIELD_PLAYER_ICON_FIRST) ? FIELD_PLAYER_ICON_FIRST_V : FIELD_PLAYER_ICON_V;
     prim->u2 = prim->u0;
@@ -182,5 +178,6 @@ void* field_draw_player_icon(POLY_FT4* handle, u_long* ordering_table, s32 selec
     draw_mode = (DR_TPAGE*)prim;
     setDrawTPage(draw_mode, 0, 0, FIELD_PLAYER_ICON_TPAGE);
     addPrim(ordering_table, draw_mode);
-    return draw_mode + 1;
+    handle = (POLY_FT4*)(draw_mode + 1);
+    return handle;
 }
