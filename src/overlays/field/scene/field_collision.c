@@ -2740,10 +2740,8 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
     s32 open;
     s32 closing_open;
     u32 prev_open;
-    u16 y0;
-    u16 ybase;
     s16 dx;
-    s32 dy;
+    s16 dy;
     s16 x;
     s16 sgn;
     s16 ystep;
@@ -2802,34 +2800,28 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                 if (dx >= 0)
                 {
                     x = prev->x;
-                    y0 = prev->z;
-                    dy = pt->z;
-                    dy -= y0;
-                    ybase = node->min_z;
-                    row = y0 - ybase;
+                    row = prev->z - node->min_z;
+                    dy = pt->z - prev->z;
                     sgn = 1;
                 }
                 else
                 {
                     dx = -dx;
                     x = pt->x;
+                    row = pt->z - node->min_z;
+                    dy = prev->z - pt->z;
                     sgn = -1;
-                    y0 = pt->z;
-                    dy = prev->z;
-                    dy -= y0;
-                    ybase = node->min_z;
-                    row = y0 - ybase;
                 }
 
                 cp = &counts[row];
                 sp_row = &spans[row * capacity];
                 fl_row = &flags[row * capacity];
 
-                if ((s16)dy != 0)
+                if (dy != 0)
                 {
                     ystep = 1;
 
-                    if ((s16)dy < 0)
+                    if (dy < 0)
                     {
                         dy = -dy;
                         ystep = -1;
@@ -2851,7 +2843,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                         first_dir = last_dir;
                     }
 
-                    if ((s16)dy < dx)
+                    if (dy < dx)
                     {
                         j = dx + 1;
                         err = -dx;
@@ -2878,7 +2870,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                             do
                             {
                                 x++;
-                                err += (s16)dy * 2;
+                                err += dy * 2;
                                 j--;
                             } while ((err < 0) && (j > 0));
 
@@ -2905,9 +2897,9 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                     }
                     else
                     {
-                        err = -(s16)dy;
+                        err = -dy;
 
-                        for (j = (s16)dy; j != -1; j--)
+                        for (j = dy; j != -1; j--)
                         {
                             n = *cp;
 
@@ -2943,7 +2935,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                             if (err >= 0)
                             {
                                 x++;
-                                err -= (s16)dy * 2;
+                                err -= dy * 2;
                             }
                         }
                     }
@@ -2997,9 +2989,8 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
     /* Closing edge: back to the first run's first point. */
     closing_open = 0;
     run = def->runs;
-    y0 = run->count & FIELD_COLLISION_RUN_OPEN;
 
-    if (y0)
+    if (run->count & FIELD_COLLISION_RUN_OPEN)
     {
         closing_open = prev_open << 7;
     }
@@ -3011,34 +3002,28 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
     if (dx >= 0)
     {
         x = prev->x;
-        y0 = prev->z;
-        dy = pt->z;
-        dy -= y0;
-        ybase = node->min_z;
-        row = y0 - ybase;
+        row = prev->z - node->min_z;
+        dy = pt->z - prev->z;
         sgn = 1;
     }
     else
     {
         dx = -dx;
         x = pt->x;
+        row = pt->z - node->min_z;
+        dy = prev->z - pt->z;
         sgn = -1;
-        y0 = pt->z;
-        dy = prev->z;
-        dy -= y0;
-        ybase = node->min_z;
-        row = y0 - ybase;
     }
 
     cp = &counts[row];
     sp_row = &spans[row * capacity];
     fl_row = &flags[row * capacity];
 
-    if ((s16)dy != 0)
+    if (dy != 0)
     {
         ystep = 1;
 
-        if ((s16)dy < 0)
+        if (dy < 0)
         {
             dy = -dy;
             ystep = -1;
@@ -3062,7 +3047,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
             merge_row2 = -1;
         }
 
-        if ((s16)dy < dx)
+        if (dy < dx)
         {
             j = dx + 1;
             err = -dx;
@@ -3097,7 +3082,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                 do
                 {
                     x++;
-                    err += (s16)dy * 2;
+                    err += dy * 2;
                     j--;
                 } while ((err < 0) && (j > 0));
 
@@ -3132,25 +3117,10 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
         }
         else
         {
-            err = -(s16)dy;
+            err = -dy;
 
-            for (j = (s16)dy; j != -1; j--)
+            for (j = dy; j != -1; j--)
             {
-                dy++;
-                dy--;
-                dy++;
-                dy--;
-                dy++;
-                dy--;
-                dy++;
-                dy--;
-                dy++;
-                dy--;
-                dy++;
-                dy--;
-                dy++;
-                dy--;
-
                 n = *cp;
 
                 if (row == merge_row)
@@ -3199,7 +3169,7 @@ static void field_collision_rasterize_node(FieldCollisionNode* node, u8** alloc)
                 if (err >= 0)
                 {
                     x++;
-                    err -= (s16)dy * 2;
+                    err -= dy * 2;
                 }
             }
         }
