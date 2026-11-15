@@ -147,14 +147,11 @@ void gosub_update_and_render_elements(FieldRenderHalf* render_context)
     DRAWENV draw_env;
     u32 geometry_word;
     s32 element_height;
-    u16 visible_height;
     u32 geometry;
     u32 element_width;
     u32 element_word;
-    s32 element_height_calc;
     s32 content_height;
     u32 state_word;
-    s32 working_word;
     s32 entering_step;
     s32 entering_scaled_width;
     s32 entering_full_height;
@@ -220,21 +217,11 @@ void gosub_update_and_render_elements(FieldRenderHalf* render_context)
                     packet_cursor->color = 0xFFFF00;
                     setTile(packet_cursor);
                     packet_cursor->w = 6;
-                    element_height_calc = (element->geometry.word >> 1) & 0xFF;
+                    packet_cursor->h = (element->geometry.f.height * (element->geometry.f.height / g_gosub_row_height)) / g_gosub_row_count;
+
+                    if (packet_cursor->h >= element->geometry.f.height - 2)
                     {
-                        volatile u16* bar_height;
-                        s32 initial_height;
-
-                        bar_height = &packet_cursor->h;
-                        *bar_height = (element_height_calc * (element_height_calc / g_gosub_row_height)) / g_gosub_row_count;
-                        initial_height = (s16)*bar_height;
-                        working_word = element->geometry.word;
-                        visible_height = ((u32)working_word >> 1) & 0xFF;
-
-                        if (initial_height >= visible_height - 2)
-                        {
-                            *bar_height = visible_height;
-                        }
+                        packet_cursor->h = element->geometry.f.height;
                     }
 
                     packet_cursor->x = 1;
