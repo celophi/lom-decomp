@@ -39,9 +39,9 @@ class SourceTest(unittest.TestCase):
         self.assertEqual(len(re.findall(r"\bu16\s+\w+;", glyph)), 2)
         self.assertEqual(golem.GLYPH_RECORD.size, 8)
         panel = re.search(r"typedef struct\s*\{([^}]+)\}\s*GolemPanelRecord;", source).group(1)
-        self.assertEqual(len(re.findall(r"\bu32\s+\w+;", panel)), 2)
-        self.assertIn("GolemPanelDimensions dimensions;", panel)
-        self.assertEqual(len(re.findall(r"\bu16\s+\w+;", panel)), 4)
+        bit_widths = [int(width) for width in re.findall(r"\bu32\s+\w+\s*:\s*(\d+);", panel)]
+        self.assertEqual(sum(bit_widths), 80)
+        self.assertEqual(len(re.findall(r"\bu16\s+\w+;", panel)), 5)
         self.assertEqual(golem.PANEL_RECORD.size, 20)
 
     def test_panel_behaviors_come_from_the_owning_enum(self):

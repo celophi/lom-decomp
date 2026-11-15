@@ -289,7 +289,7 @@ s32 gosub_handle_make_block_dialog(s32 dialog_result)
         g_gosub_required_selection_count = 2;
         g_gosub_selection_mode = 2;
         g_gosub_selection_count = 0;
-        g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
+        g_gosub_elements[0].state = GOSUB_ELEMENT_STATE_INACTIVE;
         g_gosub_screen_sequence_index--;
 
         if (g_gosub_row_count == 0)
@@ -305,7 +305,7 @@ s32 gosub_handle_make_block_dialog(s32 dialog_result)
 
     g_gosub_selection_count--;
     g_gosub_screen_sequence_index--;
-    g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
+    g_gosub_elements[0].state = GOSUB_ELEMENT_STATE_INACTIVE;
     return 0;
 }
 

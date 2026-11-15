@@ -35,12 +35,7 @@
 /** @brief The saved game, addressed directly through g_saved_game rather than g_saved_game_ctx. */
 #define GOLEM_SAVED_GAME ((SavedGameLayout*)g_saved_game.bytes)
 #define GOLEM_LOGIC_BLOCK(index) (GOLEM_SAVED_GAME->logic_blocks[(index)].word)
-#define GOLEM_PANEL_BEHAVIOR_SHIFT 3
-#define GOLEM_PANEL_FLASH_SHIFT 7
-#define GOLEM_PANEL_FLASH_MASK (0xF << GOLEM_PANEL_FLASH_SHIFT)
 #define GOLEM_PANEL_FLASH_FRAMES 3
-#define GOLEM_ACTIVATE_PANEL(word) (((word) & ~GOLEM_PANEL_FLASH_MASK) | (GOLEM_PANEL_FLASH_FRAMES << GOLEM_PANEL_FLASH_SHIFT))
-#define GOLEM_SET_PANEL_FLASH(word, frames) (((word) & ~GOLEM_PANEL_FLASH_MASK) | (((frames) & 0xF) << GOLEM_PANEL_FLASH_SHIFT))
 /**
  * @brief Address of string @p index in the archive section @p offset bytes into @p archive.
  */
@@ -90,27 +85,26 @@ typedef struct GolemRenderContext
     DRAWENV draw_env;
 } GolemRenderContext;
 
-/** @brief Packed high texture-height bits and the panel's horizontal position. */
-typedef union
-{
-    u32 packed;
-    struct
-    {
-        u16 texture_height_high;
-        u16 x;
-    } fields;
-} GolemPanelDimensions;
-
-/** @brief Texture, animation, and screen rectangle for one UI panel. */
+/** @brief Texture, flash state, and screen rectangle for one UI panel. */
 typedef struct
 {
-    /** @brief Blend mode [1:0], semitransparency [2], behavior [6:3],
-     *         flash frames [10:7], and texture U [18:11]. */
-    u32 attributes;
-    /** @brief Texture V [10:3], CLUT X / 16 [16:11], cell width [25:17],
-     *         and the low six cell-height bits [31:26]. */
-    u32 texture;
-    GolemPanelDimensions dimensions;
+    /** @brief Semi-transparency rate of the panel's texture page. */
+    u32 blend_mode : 2;
+    u32 semi_transparent : 1;
+    /** @brief GolemPanelBehavior that decides when the panel is drawn. */
+    u32 behavior : 4;
+    /** @brief Frames of flash tint left, started when the panel's control is used. */
+    u32 flash_frames : 4;
+    u32 texture_u : 8;
+    u32 unused_bits_19 : 16;
+    u32 texture_v : 8;
+    /** @brief CLUT X position in 16-pixel units. */
+    u32 clut_x : 6;
+    /** @brief Size of the texture cell; a larger panel repeats it. */
+    u32 cell_width : 9;
+    u32 cell_height : 9;
+    u32 unused_bits_67 : 13;
+    u16 x;
     u16 y;
     u16 width;
     u16 height;
@@ -531,7 +525,7 @@ void golem_handle_input(void)
             }
 
             field_play_sound(SFX_CURSOR, 0x80);
-            g_golem_panel_records[GOLEM_PANEL_ROTATE].attributes = GOLEM_ACTIVATE_PANEL(g_golem_panel_records[GOLEM_PANEL_ROTATE].attributes);
+            g_golem_panel_records[GOLEM_PANEL_ROTATE].flash_frames = GOLEM_PANEL_FLASH_FRAMES;
             return;
         }
 
@@ -593,14 +587,14 @@ void golem_handle_input(void)
                     {
                         g_golem_scroll_steps = LIST_SCROLL_FRAMES;
                         g_golem_scroll_target_y -= GOLEM_BLOCK_LIST_ROW_HEIGHT;
-                        g_golem_panel_records[GOLEM_PANEL_SCROLL_UP].attributes = GOLEM_ACTIVATE_PANEL(g_golem_panel_records[GOLEM_PANEL_SCROLL_UP].attributes);
+                        g_golem_panel_records[GOLEM_PANEL_SCROLL_UP].flash_frames = GOLEM_PANEL_FLASH_FRAMES;
                     }
                 }
                 else if ((g_pad_input & PAD_BTN_DOWN) && ((g_golem_scroll_target_y / GOLEM_BLOCK_LIST_ROW_HEIGHT) != (g_golem_logic_block_count - 1)))
                 {
                     g_golem_scroll_steps = LIST_SCROLL_FRAMES;
                     g_golem_scroll_target_y += GOLEM_BLOCK_LIST_ROW_HEIGHT;
-                    g_golem_panel_records[GOLEM_PANEL_SCROLL_DOWN].attributes = GOLEM_ACTIVATE_PANEL(g_golem_panel_records[GOLEM_PANEL_SCROLL_DOWN].attributes);
+                    g_golem_panel_records[GOLEM_PANEL_SCROLL_DOWN].flash_frames = GOLEM_PANEL_FLASH_FRAMES;
                 }
 
                 repeat_count--;
@@ -633,7 +627,7 @@ void golem_handle_input(void)
 
             g_golem_scroll_target_y = block_index * GOLEM_BLOCK_LIST_ROW_HEIGHT;
             g_golem_scroll_steps = LIST_SCROLL_FRAMES;
-            g_golem_panel_records[GOLEM_PANEL_SCROLL_DOWN].attributes = GOLEM_ACTIVATE_PANEL(g_golem_panel_records[GOLEM_PANEL_SCROLL_DOWN].attributes);
+            g_golem_panel_records[GOLEM_PANEL_SCROLL_DOWN].flash_frames = GOLEM_PANEL_FLASH_FRAMES;
             field_play_sound(SFX_CURSOR, 0x80);
             return;
         }
@@ -662,7 +656,7 @@ void golem_handle_input(void)
 
             g_golem_scroll_target_y = block_index * GOLEM_BLOCK_LIST_ROW_HEIGHT;
             g_golem_scroll_steps = LIST_SCROLL_FRAMES;
-            g_golem_panel_records[GOLEM_PANEL_SCROLL_UP].attributes = GOLEM_ACTIVATE_PANEL(g_golem_panel_records[GOLEM_PANEL_SCROLL_UP].attributes);
+            g_golem_panel_records[GOLEM_PANEL_SCROLL_UP].flash_frames = GOLEM_PANEL_FLASH_FRAMES;
             field_play_sound(SFX_CURSOR, 0x80);
             return;
         }
@@ -912,8 +906,8 @@ void golem_render(GolemRenderContext* render_context)
     for (panel_index = 0; panel_index < GOLEM_PANEL_COUNT; panel_index++)
     {
         panel_record = &g_golem_panel_records[panel_index];
-        packet_cursor = golem_draw_panel(packet_cursor, panel_ordering_table, panel_index, panel_record->dimensions.fields.x, panel_record->y,
-                                         panel_record->width, panel_record->height);
+        packet_cursor =
+            golem_draw_panel(packet_cursor, panel_ordering_table, panel_index, panel_record->x, panel_record->y, panel_record->width, panel_record->height);
     }
 
     packet_cursor = golem_draw_block_list(packet_cursor, render_context);
@@ -1109,6 +1103,16 @@ u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
 }
 
 /**
+ * @brief Width of the texture cell a panel is tiled with.
+ * @param panel_index Index of the panel record.
+ * @return Cell width in pixels.
+ */
+static inline s32 golem_panel_cell_width(s32 panel_index)
+{
+    return g_golem_panel_records[panel_index].cell_width;
+}
+
+/**
  * @brief Draw one UI panel record as a grid of textured sprites plus a
  *        trailing draw-mode packet, gated by the record's state field.
  * @param packet_cursor Running packet cursor.
@@ -1123,23 +1127,19 @@ u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
 u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index, s32 x, s32 y, s32 width, s32 height)
 {
     SPRT* sprite;
-    s32 flash_frames;
     s32 tint;
-    s32 y_offset;
     s32 x_offset;
+    s32 y_offset;
     s32 row_height;
-    s32 cell_height;
-    s32 segment_width;
-    s32 available_width;
+    s32 cell_size;
     s32 remaining_height;
     s32 code;
-    s32 bottom_texture_height;
     DR_TPAGE* draw_mode;
     u8 unused[16];
 
     tint = GPU_TINT_NEUTRAL;
 
-    switch ((g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_BEHAVIOR_SHIFT) & 0xF)
+    switch (g_golem_panel_records[panel_index].behavior)
     {
         case GOLEM_PANEL_ALWAYS:
         case GOLEM_PANEL_ALWAYS_7:
@@ -1147,7 +1147,7 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
         case GOLEM_PANEL_GRID_4X4:
         case GOLEM_PANEL_GRID_5X5:
         case GOLEM_PANEL_GRID_6X6:
-            if ((((g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_BEHAVIOR_SHIFT) & 0xF) - GOLEM_PANEL_GRID_4X4) != g_golem_grid_size_class)
+            if ((g_golem_panel_records[panel_index].behavior - GOLEM_PANEL_GRID_4X4) != g_golem_grid_size_class)
             {
                 return packet_cursor;
             }
@@ -1159,12 +1159,10 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
                 return packet_cursor;
             }
 
-            flash_frames = (g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_FLASH_SHIFT) & 0xF;
-
-            if (flash_frames != 0)
+            if (g_golem_panel_records[panel_index].flash_frames != 0)
             {
                 tint = GPU_COLOR_WORD(0xC0, 0, 0);
-                g_golem_panel_records[panel_index].attributes = GOLEM_SET_PANEL_FLASH(g_golem_panel_records[panel_index].attributes, flash_frames - 1);
+                g_golem_panel_records[panel_index].flash_frames--;
             }
 
             break;
@@ -1174,22 +1172,18 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
                 return packet_cursor;
             }
 
-            flash_frames = (g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_FLASH_SHIFT) & 0xF;
-
-            if (flash_frames != 0)
+            if (g_golem_panel_records[panel_index].flash_frames != 0)
             {
                 tint = GPU_COLOR_WORD(0xC0, 0, 0);
-                g_golem_panel_records[panel_index].attributes = GOLEM_SET_PANEL_FLASH(g_golem_panel_records[panel_index].attributes, flash_frames - 1);
+                g_golem_panel_records[panel_index].flash_frames--;
             }
 
             break;
         case GOLEM_PANEL_FLASH_WHITE:
-            flash_frames = (g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_FLASH_SHIFT) & 0xF;
-
-            if (flash_frames != 0)
+            if (g_golem_panel_records[panel_index].flash_frames != 0)
             {
                 tint = GPU_COLOR_WORD(0xC0, 0xC0, 0xC0);
-                g_golem_panel_records[panel_index].attributes = GOLEM_SET_PANEL_FLASH(g_golem_panel_records[panel_index].attributes, flash_frames - 1);
+                g_golem_panel_records[panel_index].flash_frames--;
             }
 
             break;
@@ -1203,54 +1197,51 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
     {
         remaining_height = height - y_offset;
         row_height = remaining_height;
-        segment_width = g_golem_panel_records[panel_index].texture >> 26;
-        cell_height = ((g_golem_panel_records[panel_index].dimensions.packed & 7) << 6) | segment_width;
+        cell_size = g_golem_panel_records[panel_index].cell_height;
         code = GPU_CODE_SPRT;
         x_offset = 0;
 
-        if (cell_height < row_height)
+        if (cell_size < row_height)
         {
-            row_height = cell_height;
+            row_height = cell_size;
         }
 
         while (x_offset < width)
         {
             sprite = (SPRT*)packet_cursor;
-            available_width = width - x_offset;
-            segment_width = (g_golem_panel_records[panel_index].texture >> 17) & 0x1FF;
+            cell_size = golem_panel_cell_width(panel_index);
 
-            if (segment_width >= available_width)
+            if (cell_size >= width - x_offset)
             {
-                segment_width = available_width;
+                cell_size = width - x_offset;
             }
 
             SET_BGR0_PACKED(sprite, tint);
             setlen(sprite, 4);
             setcode(sprite, code);
 
-            if ((g_golem_panel_records[panel_index].attributes >> 2) & 1)
+            if (g_golem_panel_records[panel_index].semi_transparent)
             {
                 setcode(sprite, GPU_CODE_SPRT | GPU_CODE_SEMI_TRANS);
             }
 
             setXY0(sprite, (x + 8) + x_offset, y + y_offset);
-            setWH(sprite, segment_width, row_height);
-            setUV0(sprite, g_golem_panel_records[panel_index].attributes >> 11, g_golem_panel_records[panel_index].texture >> 3);
-            sprite->clut = ((g_golem_panel_records[panel_index].texture >> 11) & 0x3F) | getClut(0, VRAM_CLUT_Y);
+            setWH(sprite, cell_size, row_height);
+            setUV0(sprite, g_golem_panel_records[panel_index].texture_u, g_golem_panel_records[panel_index].texture_v);
+            sprite->clut = g_golem_panel_records[panel_index].clut_x | getClut(0, VRAM_CLUT_Y);
             addPrim(ordering_table, sprite);
-            x_offset += (g_golem_panel_records[panel_index].texture >> 17) & 0x1FF;
+            x_offset += golem_panel_cell_width(panel_index);
             packet_cursor += sizeof(SPRT);
         }
 
-        bottom_texture_height = g_golem_panel_records[panel_index].texture >> 26;
-        cell_height = ((g_golem_panel_records[panel_index].dimensions.packed & 7) << 6) | bottom_texture_height;
-        y_offset += cell_height;
+        cell_size = g_golem_panel_records[panel_index].cell_height;
+        y_offset += cell_size;
         remaining_height = height - y_offset;
     }
 
     draw_mode = (DR_TPAGE*)packet_cursor;
     setlen(draw_mode, 1);
-    code = getTPage(GPU_TEXTURE_4BIT, g_golem_panel_records[panel_index].attributes & 3, 320, 0);
+    code = getTPage(GPU_TEXTURE_4BIT, g_golem_panel_records[panel_index].blend_mode, 320, 0);
     draw_mode->code[0] = _get_mode(0, 0, code);
     addPrim(ordering_table, draw_mode);
     packet_cursor += sizeof(DR_TPAGE);

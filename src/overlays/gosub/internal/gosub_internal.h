@@ -243,28 +243,15 @@ typedef enum GosubElementState
  */
 typedef struct
 {
-    union
-    {
-        u32 word;
-        struct
-        {
-            u32 state : 3;
-            u32 transition_step : 4;
-            u32 x : 9;
-            u32 y : 8;
-            u32 width_low : 8;
-        } f;
-    } attr;
-    union
-    {
-        u32 word;
-        struct
-        {
-            u32 width_high : 1;
-            u32 height : 8;
-            u32 reserved_9 : 23;
-        } f;
-    } geometry;
+    /** @brief GosubElementState. */
+    u32 state : 3;
+    /** @brief Open or close animation step, up to GOSUB_ELEMENT_FULL_STEP. */
+    u32 transition_step : 4;
+    u32 x : 9;
+    u32 y : 8;
+    u32 width : 9;
+    u32 height : 8;
+    u32 unused_bits_41 : 23;
     void* draw_handler;
 } GosubElement;
 
@@ -595,19 +582,6 @@ extern u32 g_golem_logic_block_icons[];
 /** @brief Address of UI message @p message (a GosubMessage). */
 #define GOSUB_MESSAGE(message) GOSUB_TEXT(GOSUB_TEXT_MESSAGES, message)
 
-/**
- * @brief Bit 8 of a 9-bit element width, for GosubElement::geometry.f.width_high.
- * @param width Element width.
- */
-#define GOSUB_ELEMENT_WIDTH_HIGH(width) ((width) >> 8)
-
-/**
- * @brief Store the low eight bits of a 9-bit element width in the top byte of GosubElement::attr.
- * @param element Element to update.
- * @param width Element width; bit 8 is stored separately with GOSUB_ELEMENT_WIDTH_HIGH.
- */
-#define GOSUB_SET_ELEMENT_WIDTH_LOW(element, width) ((element)->attr.word = ((element)->attr.word & 0x00FFFFFF) | ((u32)((width) & 0xFF) << 24))
-
 /* External and forward function declarations. */
 
 /* FIELD exports with no project header. FIELD stays resident while GOSUB runs. */
@@ -736,13 +710,12 @@ extern inline void gosub_open_confirmation_dialog(void)
     element = &g_gosub_elements[0];
     element->draw_handler = (void*)&gosub_draw_confirmation_prompt;
     g_gosub_dialog_choice = 0;
-    element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
-    element->attr.f.transition_step = 1;
-    element->attr.f.x = GOSUB_MESSAGE_PANEL_X;
-    element->attr.f.y = GOSUB_DIALOG_PANEL_Y;
-    element->geometry.f.width_high = GOSUB_ELEMENT_WIDTH_HIGH(GOSUB_MESSAGE_PANEL_WIDTH);
-    element->geometry.f.height = GOSUB_TWO_LINE_PANEL_HEIGHT;
-    GOSUB_SET_ELEMENT_WIDTH_LOW(element, GOSUB_MESSAGE_PANEL_WIDTH);
+    element->state = GOSUB_ELEMENT_STATE_ENTERING;
+    element->transition_step = 1;
+    element->x = GOSUB_MESSAGE_PANEL_X;
+    element->y = GOSUB_DIALOG_PANEL_Y;
+    element->width = GOSUB_MESSAGE_PANEL_WIDTH;
+    element->height = GOSUB_TWO_LINE_PANEL_HEIGHT;
 }
 
 #endif
