@@ -398,7 +398,7 @@ struct GosubTilePacket
     s16 x;
     s16 y;
     s16 w;
-    u16 h;
+    volatile s16 h;
 };
 
 /** @brief Draw callback installed on a gosub element. */

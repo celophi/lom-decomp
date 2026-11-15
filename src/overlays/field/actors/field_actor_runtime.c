@@ -1266,20 +1266,18 @@ void field_update_actor_animations(void)
 static void field_reset_actor_track_mask(FieldActorSlot* slot)
 {
     s32 i;
-    u16 track_interval = slot->track_interval;
+    u16 track_bit = 1;
 
-    track_interval++;
-    track_interval--;
+    slot->track_mask = track_bit;
 
-    slot->track_mask = 1;
-
-    if (track_interval == 0)
+    if (slot->track_interval == 0)
     {
         slot->track_mask = 0;
 
         for (i = 0; i < slot->target_count; i++)
         {
-            slot->track_mask |= 1 << i;
+            track_bit = 1 << i;
+            slot->track_mask |= track_bit;
         }
     }
 
