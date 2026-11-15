@@ -15,7 +15,7 @@ s32 gosub_handle_block_action_dialog(s32 dialog_result)
     if (dialog_result != 0)
     {
         g_gosub_selection_count = 0;
-        g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
+        g_gosub_elements[0].state = GOSUB_ELEMENT_STATE_INACTIVE;
         return 0;
     }
 
@@ -54,7 +54,7 @@ s32 gosub_handle_discard_dialog(s32 dialog_result)
     s32 scroll_y;
     s32 max_scroll;
 
-    g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
+    g_gosub_elements[0].state = GOSUB_ELEMENT_STATE_INACTIVE;
 
     if (dialog_result == 0 && (g_gosub_dialog_choice & GOSUB_CONFIRMATION_CHOICE_MASK) == 0)
     {
@@ -127,8 +127,8 @@ s32 gosub_handle_backtrack_dialog(s32 dialog_result)
         g_gosub_result_count--;
     }
 
-    g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_EXITING;
-    g_gosub_elements[0].attr.f.transition_step = 8;
+    g_gosub_elements[0].state = GOSUB_ELEMENT_STATE_EXITING;
+    g_gosub_elements[0].transition_step = 8;
     return 0;
 }
 
@@ -155,7 +155,7 @@ s32 gosub_handle_sort_dialog(s32 dialog_result)
         g_gosub_selection_count = 1;
     }
 
-    g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
+    g_gosub_elements[0].state = GOSUB_ELEMENT_STATE_INACTIVE;
     return 0;
 }
 
@@ -170,13 +170,12 @@ void gosub_open_block_action_dialog(void)
     element->draw_handler = &gosub_draw_block_action_dialog;
     g_gosub_dialog_choice = 0;
     g_gosub_dialog_handler = gosub_handle_block_action_dialog;
-    element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
-    element->attr.f.transition_step = 1;
-    element->attr.f.x = GOSUB_CHOICE_PANEL_X;
-    element->attr.f.y = GOSUB_DIALOG_PANEL_Y;
-    element->geometry.f.width_high = GOSUB_ELEMENT_WIDTH_HIGH(GOSUB_CHOICE_PANEL_WIDTH);
-    element->geometry.f.height = GOSUB_TWO_LINE_PANEL_HEIGHT;
-    GOSUB_SET_ELEMENT_WIDTH_LOW(element, GOSUB_CHOICE_PANEL_WIDTH);
+    element->state = GOSUB_ELEMENT_STATE_ENTERING;
+    element->transition_step = 1;
+    element->x = GOSUB_CHOICE_PANEL_X;
+    element->y = GOSUB_DIALOG_PANEL_Y;
+    element->width = GOSUB_CHOICE_PANEL_WIDTH;
+    element->height = GOSUB_TWO_LINE_PANEL_HEIGHT;
     field_reset_input_repeat();
 }
 
@@ -191,13 +190,12 @@ void gosub_open_sort_dialog(void)
     element->draw_handler = &gosub_draw_sort_dialog;
     g_gosub_dialog_handler = gosub_handle_sort_dialog;
     g_gosub_dialog_choice = 0;
-    element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
-    element->attr.f.transition_step = 1;
-    element->attr.f.x = GOSUB_CHOICE_PANEL_X;
-    element->attr.f.y = GOSUB_DIALOG_PANEL_Y;
-    element->geometry.f.width_high = GOSUB_ELEMENT_WIDTH_HIGH(GOSUB_CHOICE_PANEL_WIDTH);
-    element->geometry.f.height = GOSUB_THREE_LINE_PANEL_HEIGHT;
-    GOSUB_SET_ELEMENT_WIDTH_LOW(element, GOSUB_CHOICE_PANEL_WIDTH);
+    element->state = GOSUB_ELEMENT_STATE_ENTERING;
+    element->transition_step = 1;
+    element->x = GOSUB_CHOICE_PANEL_X;
+    element->y = GOSUB_DIALOG_PANEL_Y;
+    element->width = GOSUB_CHOICE_PANEL_WIDTH;
+    element->height = GOSUB_THREE_LINE_PANEL_HEIGHT;
     field_reset_input_repeat();
 }
 
@@ -316,13 +314,12 @@ void gosub_open_message_dialog(u8* message_text)
     g_gosub_dialog_choice = 0;
     g_gosub_dialog_accepting_input = 1;
     g_gosub_suppress_dialog_sound = 0;
-    element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
-    element->attr.f.transition_step = 1;
-    element->attr.f.x = GOSUB_MESSAGE_PANEL_X;
-    element->attr.f.y = GOSUB_DIALOG_PANEL_Y;
-    element->geometry.f.width_high = GOSUB_ELEMENT_WIDTH_HIGH(GOSUB_MESSAGE_PANEL_WIDTH);
-    element->geometry.f.height = GOSUB_ONE_LINE_PANEL_HEIGHT;
-    GOSUB_SET_ELEMENT_WIDTH_LOW(element, GOSUB_MESSAGE_PANEL_WIDTH);
+    element->state = GOSUB_ELEMENT_STATE_ENTERING;
+    element->transition_step = 1;
+    element->x = GOSUB_MESSAGE_PANEL_X;
+    element->y = GOSUB_DIALOG_PANEL_Y;
+    element->width = GOSUB_MESSAGE_PANEL_WIDTH;
+    element->height = GOSUB_ONE_LINE_PANEL_HEIGHT;
     field_reset_input_repeat();
     g_gosub_result_count = 0;
 }

@@ -36,7 +36,7 @@ s32 gosub_handle_input(void)
     s32 restored_row;
     s32 max_scroll_y;
 
-    if (g_gosub_elements[1].attr.f.state == GOSUB_ELEMENT_STATE_INACTIVE && g_gosub_elements[0].attr.f.state == GOSUB_ELEMENT_STATE_INACTIVE)
+    if (g_gosub_elements[1].state == GOSUB_ELEMENT_STATE_INACTIVE && g_gosub_elements[0].state == GOSUB_ELEMENT_STATE_INACTIVE)
     {
         g_gosub_finished = 1;
         return;
@@ -47,7 +47,7 @@ s32 gosub_handle_input(void)
         return;
     }
 
-    if (g_gosub_elements[0].attr.f.state == GOSUB_ELEMENT_STATE_ACTIVE)
+    if (g_gosub_elements[0].state == GOSUB_ELEMENT_STATE_ACTIVE)
     {
         if (g_gosub_dialog_accepting_input != 0)
         {
@@ -64,7 +64,7 @@ s32 gosub_handle_input(void)
                 return;
             }
 
-            g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
+            g_gosub_elements[0].state = GOSUB_ELEMENT_STATE_INACTIVE;
             g_gosub_dialog_accepting_input = 0;
             return;
         }
@@ -454,7 +454,7 @@ s32 gosub_are_elements_idle(void)
 
     for (i = 0; i < GOSUB_ELEMENT_COUNT; i++)
     {
-        if (element->attr.f.state == GOSUB_ELEMENT_STATE_ENTERING || element->attr.f.state == GOSUB_ELEMENT_STATE_EXITING)
+        if (element->state == GOSUB_ELEMENT_STATE_ENTERING || element->state == GOSUB_ELEMENT_STATE_EXITING)
         {
             return 0;
         }
