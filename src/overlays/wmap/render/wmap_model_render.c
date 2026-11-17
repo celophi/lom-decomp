@@ -201,8 +201,16 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
     WmapScreenPoint screen_xy3;
     s32 face_order;
     WmapMeshVertex projection_vertices[4];
-    /* TODO: Recover the original color work-buffer layout. */
-    CVECTOR colors[20];
+    CVECTOR color;
+    CVECTOR textured_color0;
+    CVECTOR shaded_color1;
+    CVECTOR textured_color1;
+    CVECTOR shaded_color2;
+    CVECTOR textured_color2;
+    CVECTOR shaded_color3;
+    CVECTOR unused_color0;
+    CVECTOR textured_color3;
+    CVECTOR unused_color1;
 
     if (blend_mode & WMAP_MODEL_DRAW_BACKFACES)
     {
@@ -302,8 +310,8 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 SET_XY1_PACKED(ft4, screen_xy1.packed);
                 SET_XY2_PACKED(ft4, screen_xy2.packed);
                 SET_XY3_PACKED(ft4, screen_xy3.packed);
-                colors[0] = attributes->colors[0];
-                SET_MODEL_COLOR(ft4->r0, colors[0], (color_scale & WMAP_MODEL_COLOR_MASK));
+                color = attributes->colors[0];
+                SET_MODEL_COLOR(ft4->r0, color, (color_scale & WMAP_MODEL_COLOR_MASK));
                 setlen(ft4, 9);
                 setcode(ft4, WMAP_MODEL_FT4);
 
@@ -389,8 +397,8 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 SET_XY0_PACKED(ft3, screen_xy0.packed);
                 SET_XY1_PACKED(ft3, screen_xy1.packed);
                 SET_XY2_PACKED(ft3, screen_xy2.packed);
-                colors[0] = attributes->colors[0];
-                SET_MODEL_COLOR(ft3->r0, colors[0], (color_scale & WMAP_MODEL_COLOR_MASK));
+                color = attributes->colors[0];
+                SET_MODEL_COLOR(ft3->r0, color, (color_scale & WMAP_MODEL_COLOR_MASK));
                 setlen(ft3, 7);
                 setcode(ft3, WMAP_MODEL_FT3);
 
@@ -429,17 +437,17 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
                 gte_rtpt();
                 LOAD_MODEL_VERTEX(projection_vertices[3], vertices, face->vertex_indices[3]);
-                colors[0] = attributes->colors[0];
-                SET_MODEL_COLOR(g4->r0, colors[0], color_scale);
-                colors[4] = attributes->colors[1];
-                SET_MODEL_COLOR(g4->r1, colors[4], color_scale);
+                color = attributes->colors[0];
+                SET_MODEL_COLOR(g4->r0, color, color_scale);
+                shaded_color1 = attributes->colors[1];
+                SET_MODEL_COLOR(g4->r1, shaded_color1, color_scale);
                 gte_stsxy01(&screen_xy0, &screen_xy1);
                 gte_stsxy2(&screen_xy2);
                 gte_nclip();
-                colors[8] = attributes->colors[2];
-                SET_MODEL_COLOR(g4->r2, colors[8], color_scale);
-                colors[12] = attributes->colors[3];
-                SET_MODEL_COLOR(g4->r3, colors[12], color_scale);
+                shaded_color2 = attributes->colors[2];
+                SET_MODEL_COLOR(g4->r2, shaded_color2, color_scale);
+                shaded_color3 = attributes->colors[3];
+                SET_MODEL_COLOR(g4->r3, shaded_color3, color_scale);
                 gte_stopz(&face_order);
 
                 if (draw_backfaces == 0)
@@ -511,8 +519,8 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
 
                 gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
                 gte_rtpt();
-                colors[0] = attributes->colors[0];
-                SET_MODEL_COLOR(g3->r0, colors[0], color_scale);
+                color = attributes->colors[0];
+                SET_MODEL_COLOR(g3->r0, color, color_scale);
                 gte_stsxy01(&screen_xy0, &screen_xy1);
                 gte_stsxy2(&screen_xy2);
                 gte_nclip();
@@ -545,10 +553,10 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 SET_XY0_PACKED(g3, screen_xy0.packed);
                 SET_XY1_PACKED(g3, screen_xy1.packed);
                 SET_XY2_PACKED(g3, screen_xy2.packed);
-                colors[4] = attributes->colors[1];
-                SET_MODEL_COLOR(g3->r1, colors[4], color_scale);
-                colors[8] = attributes->colors[2];
-                SET_MODEL_COLOR(g3->r2, colors[8], color_scale);
+                shaded_color1 = attributes->colors[1];
+                SET_MODEL_COLOR(g3->r1, shaded_color1, color_scale);
+                shaded_color2 = attributes->colors[2];
+                SET_MODEL_COLOR(g3->r2, shaded_color2, color_scale);
                 setlen(g3, 6);
                 setcode(g3, WMAP_MODEL_G3);
 
@@ -609,8 +617,8 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 gte_stsxy(&screen_xy3);
                 SET_XY2_PACKED(f4, screen_xy2.packed);
                 SET_XY3_PACKED(f4, screen_xy3.packed);
-                colors[0] = attributes->colors[0];
-                SET_MODEL_COLOR(f4->r0, colors[0], color_scale);
+                color = attributes->colors[0];
+                SET_MODEL_COLOR(f4->r0, color, color_scale);
                 setlen(f4, 5);
                 setcode(f4, WMAP_MODEL_F4);
 
@@ -637,8 +645,8 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 LOAD_MODEL_VERTEX(projection_vertices[2], vertices, face->vertex_indices[2]);
                 gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
                 gte_rtpt();
-                colors[0] = attributes->colors[0];
-                SET_MODEL_COLOR(f3->r0, colors[0], color_scale);
+                color = attributes->colors[0];
+                SET_MODEL_COLOR(f3->r0, color, color_scale);
                 gte_stsxy01(&screen_xy0, &screen_xy1);
                 gte_stsxy2(&screen_xy2);
                 gte_nclip();
@@ -746,15 +754,15 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 SET_XY0_PACKED(gt3, screen_xy0.packed);
                 SET_XY1_PACKED(gt3, screen_xy1.packed);
                 SET_XY2_PACKED(gt3, screen_xy2.packed);
-                colors[0] = attributes->colors[0];
-                colors[2] = colors[0];
-                SET_MODEL_COLOR(gt3->r0, colors[2], (color_scale & WMAP_MODEL_COLOR_MASK));
-                colors[0] = attributes->colors[1];
-                colors[6] = colors[0];
-                SET_MODEL_COLOR(gt3->r1, colors[6], (color_scale & WMAP_MODEL_COLOR_MASK));
-                colors[0] = attributes->colors[2];
-                colors[10] = colors[0];
-                SET_MODEL_COLOR(gt3->r2, colors[10], (color_scale & WMAP_MODEL_COLOR_MASK));
+                color = attributes->colors[0];
+                textured_color0 = color;
+                SET_MODEL_COLOR(gt3->r0, textured_color0, (color_scale & WMAP_MODEL_COLOR_MASK));
+                color = attributes->colors[1];
+                textured_color1 = color;
+                SET_MODEL_COLOR(gt3->r1, textured_color1, (color_scale & WMAP_MODEL_COLOR_MASK));
+                color = attributes->colors[2];
+                textured_color2 = color;
+                SET_MODEL_COLOR(gt3->r2, textured_color2, (color_scale & WMAP_MODEL_COLOR_MASK));
                 setlen(gt3, 9);
                 setcode(gt3, WMAP_MODEL_GT3);
 
@@ -848,18 +856,18 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
                 SET_XY1_PACKED(gt4, screen_xy1.packed);
                 SET_XY2_PACKED(gt4, screen_xy2.packed);
                 SET_XY3_PACKED(gt4, screen_xy3.packed);
-                colors[0] = attributes->colors[0];
-                colors[2] = colors[0];
-                SET_MODEL_COLOR(gt4->r0, colors[2], (color_scale & WMAP_MODEL_COLOR_MASK));
-                colors[0] = attributes->colors[1];
-                colors[6] = colors[0];
-                SET_MODEL_COLOR(gt4->r1, colors[6], (color_scale & WMAP_MODEL_COLOR_MASK));
-                colors[0] = attributes->colors[2];
-                colors[10] = colors[0];
-                SET_MODEL_COLOR(gt4->r2, colors[10], (color_scale & WMAP_MODEL_COLOR_MASK));
-                colors[0] = attributes->colors[3];
-                colors[16] = colors[0];
-                SET_MODEL_COLOR(gt4->r3, colors[16], (color_scale & WMAP_MODEL_COLOR_MASK));
+                color = attributes->colors[0];
+                textured_color0 = color;
+                SET_MODEL_COLOR(gt4->r0, textured_color0, (color_scale & WMAP_MODEL_COLOR_MASK));
+                color = attributes->colors[1];
+                textured_color1 = color;
+                SET_MODEL_COLOR(gt4->r1, textured_color1, (color_scale & WMAP_MODEL_COLOR_MASK));
+                color = attributes->colors[2];
+                textured_color2 = color;
+                SET_MODEL_COLOR(gt4->r2, textured_color2, (color_scale & WMAP_MODEL_COLOR_MASK));
+                color = attributes->colors[3];
+                textured_color3 = color;
+                SET_MODEL_COLOR(gt4->r3, textured_color3, (color_scale & WMAP_MODEL_COLOR_MASK));
                 setlen(gt4, 12);
                 setcode(gt4, WMAP_MODEL_GT4);
 
