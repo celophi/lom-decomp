@@ -464,7 +464,7 @@ static s32 field_roll_effect_rotation(FieldActorSlot* actor, FieldObjectPart* pa
 static void field_face_effect_target(FieldMotionRecord* effect, FieldObjectPart* part);
 static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPart* part, FieldActorSlot* actor);
 static void field_set_action_context(s32 recipient_id, s32 source_id, s32 action);
-static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* packet_cursor, s32* ordering_table, u8* frame_data);
+static void* field_render_effect_sprite_frames(FieldMotionRecord* effect, POLY_FT4* quad, s32* ordering_table, u8* frame_data);
 
 /**
  * @brief Free a just-claimed effect record and undo the spawn counts of its part.
@@ -3776,7 +3776,7 @@ void field_render_effects(FieldRenderContext* render_context)
 
                     if (frame_data != NULL)
                     {
-                        packet_cursor = field_render_effect_sprite_frames(effect, packet_cursor, ordering_table, frame_data);
+                        packet_cursor = field_render_effect_sprite_frames(effect, (POLY_FT4*)packet_cursor, ordering_table, frame_data);
                     }
 
                     break;
@@ -3790,7 +3790,7 @@ void field_render_effects(FieldRenderContext* render_context)
 
                         if (frame_data != NULL)
                         {
-                            packet_cursor = field_render_effect_sprite_frames(effect, packet_cursor, ordering_table, frame_data);
+                            packet_cursor = field_render_effect_sprite_frames(effect, (POLY_FT4*)packet_cursor, ordering_table, frame_data);
                         }
                     }
 
@@ -3881,12 +3881,12 @@ void field_render_effects(FieldRenderContext* render_context)
 /**
  * @brief Render the sprite frames for one field effect.
  * @param effect Effect state and world position.
- * @param packet_cursor Current primitive packet cursor.
+ * @param quad Next free quad in the primitive buffer.
  * @param ordering_table Depth ordering table.
  * @param frame_data Encoded sprite-frame data.
- * @return Updated primitive packet cursor.
+ * @return Next free position in the primitive buffer after the emitted sprites and ground shadow.
  */
-static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* packet_cursor, s32* ordering_table, u8* frame_data)
+static void* field_render_effect_sprite_frames(FieldMotionRecord* effect, POLY_FT4* quad, s32* ordering_table, u8* frame_data)
 {
     Vec2s* screen_origin = FIELD_EFFECT_SCRATCH_SCREEN_ORIGIN;
     Vec2s* shadow_footprint = FIELD_EFFECT_SCRATCH_FOOTPRINT;
@@ -3902,11 +3902,16 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
     s32 width_or_mode;
     s32 frame_x;
     s32 frame_y_or_clut;
-    intptr_t value0;
-    s32 value1;
+    uintptr_t tpage_input;
+    s32 tpage;
     s32 clut_x;
     s32 clut;
     u16* texture_slot_flags;
+    s32 color_word;
+    s32 texture_u;
+    s32 texture_v;
+    s32 palette_source;
+    s32 ot_depth;
 
     shadow_count = 0;
     texture_slot = 2;
@@ -3938,11 +3943,10 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
 
             if (!(flags & FIELD_SPRITE_FRAME_FOOTPRINT))
             {
-                value1 = packed_color.signed_word;
-                setlen(packet_cursor, 9);
-                SET_BGR0_PACKED(((POLY_FT4*)packet_cursor), value1);
-                setcode(packet_cursor, 0x2C);
-                setSemiTrans((POLY_FT4*)packet_cursor, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
+                color_word = packed_color.signed_word;
+                SET_BGR0_PACKED(quad, color_word);
+                setPolyFT4(quad);
+                setSemiTrans(quad, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
                 width_or_mode = frame_data[4];
                 height_minus_one = frame_data[5] - 1;
                 effect->sprite_height_minus_one = height_minus_one;
@@ -3964,45 +3968,45 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
                     frame_y_or_clut -= FIELD_SCREEN_CENTER_Y;
                 }
 
-                field_project_effect_sprite_quad(effect, screen_origin, (POLY_FT4*)packet_cursor, width_or_mode, height_minus_one, frame_x, frame_y_or_clut,
+                field_project_effect_sprite_quad(effect, screen_origin, quad, width_or_mode, height_minus_one, frame_x, frame_y_or_clut,
                                                  (FieldSpriteFrame*)frame_data, matrix);
 
                 if ((frame_data[7] ^ (effect->facing_or_reward_kind >> 1)) & FIELD_SPRITE_FRAME_FLIP_X)
                 {
-                    value0 = frame_data[2];
-                    ((POLY_FT4*)packet_cursor)->u3 = value0;
-                    ((POLY_FT4*)packet_cursor)->u1 = value0;
-                    value0 += width_or_mode;
-                    ((POLY_FT4*)packet_cursor)->u2 = value0;
-                    ((POLY_FT4*)packet_cursor)->u0 = value0;
+                    texture_u = frame_data[2];
+                    quad->u3 = texture_u;
+                    quad->u1 = texture_u;
+                    texture_u += width_or_mode;
+                    quad->u2 = texture_u;
+                    quad->u0 = texture_u;
                 }
                 else
                 {
-                    value0 = frame_data[2];
-                    ((POLY_FT4*)packet_cursor)->u2 = value0;
-                    ((POLY_FT4*)packet_cursor)->u0 = value0;
-                    value0 += width_or_mode;
-                    ((POLY_FT4*)packet_cursor)->u3 = value0;
-                    ((POLY_FT4*)packet_cursor)->u1 = value0;
+                    texture_u = frame_data[2];
+                    quad->u2 = texture_u;
+                    quad->u0 = texture_u;
+                    texture_u += width_or_mode;
+                    quad->u3 = texture_u;
+                    quad->u1 = texture_u;
                 }
 
                 if (frame_data[7] & FIELD_SPRITE_FRAME_FLIP_Y)
                 {
-                    value0 = frame_data[3];
-                    ((POLY_FT4*)packet_cursor)->v3 = value0;
-                    ((POLY_FT4*)packet_cursor)->v2 = value0;
-                    value0 += height_minus_one;
-                    ((POLY_FT4*)packet_cursor)->v1 = value0;
-                    ((POLY_FT4*)packet_cursor)->v0 = value0;
+                    texture_v = frame_data[3];
+                    quad->v3 = texture_v;
+                    quad->v2 = texture_v;
+                    texture_v += height_minus_one;
+                    quad->v1 = texture_v;
+                    quad->v0 = texture_v;
                 }
                 else
                 {
-                    value0 = frame_data[3];
-                    ((POLY_FT4*)packet_cursor)->v1 = value0;
-                    ((POLY_FT4*)packet_cursor)->v0 = value0;
-                    value0 += height_minus_one;
-                    ((POLY_FT4*)packet_cursor)->v3 = value0;
-                    ((POLY_FT4*)packet_cursor)->v2 = value0;
+                    texture_v = frame_data[3];
+                    quad->v1 = texture_v;
+                    quad->v0 = texture_v;
+                    texture_v += height_minus_one;
+                    quad->v3 = texture_v;
+                    quad->v2 = texture_v;
                 }
 
                 width_or_mode = frame_data[7] & FIELD_SPRITE_TEXTURE_MODE_MASK;
@@ -4013,75 +4017,68 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
 
                     if (actor->owner_object_index < 2)
                     {
-                        *(s16*)&((POLY_FT4*)packet_cursor)->tpage = ((texture_slot_flags[texture_slot] & 3) << 7) |
-                                                                    ((part->behavior_flags.word >> FIELD_PART_BLEND_TPAGE_SHIFT) & GPU_TPAGE_BLEND_MASK) |
-                                                                    0x10 |
-                                                                    ((((actor->owner_object_index << 6) + FIELD_ACTOR_TEXTURE_VRAM_X) & (VRAM_WIDTH - 1)) >> 6);
+                        *(s16*)&quad->tpage = ((texture_slot_flags[texture_slot] & 3) << 7) |
+                                              ((part->behavior_flags.word >> FIELD_PART_BLEND_TPAGE_SHIFT) & GPU_TPAGE_BLEND_MASK) |
+                                              0x10 |
+                                              ((((actor->owner_object_index << 6) + FIELD_ACTOR_TEXTURE_VRAM_X) & (VRAM_WIDTH - 1)) >> 6);
                         frame_y_or_clut = (actor->owner_object_index * 2) + FIELD_ACTOR_CLUT_VRAM_Y;
                     }
                     else
                     {
-                        value0 = texture_slot;
-                        value0 <<= 1;
-                        value0 += (uintptr_t)texture_slot_flags;
-                        value1 = ((*(u16*)value0 & 3) << 7) | ((part->behavior_flags.word >> FIELD_PART_BLEND_TPAGE_SHIFT) & GPU_TPAGE_BLEND_MASK);
-                        value1 |= 5;
-                        *(s16*)&((POLY_FT4*)packet_cursor)->tpage = value1;
+                        tpage_input = (texture_slot * sizeof(u16)) + (uintptr_t)texture_slot_flags;
+                        tpage = ((*(u16*)tpage_input & 3) << 7) | ((part->behavior_flags.word >> FIELD_PART_BLEND_TPAGE_SHIFT) & GPU_TPAGE_BLEND_MASK);
+                        tpage |= FIELD_SHARED_TEXTURE_VRAM_X >> 6;
+                        quad->tpage = tpage;
                     }
                 }
                 else
                 {
                     frame_y_or_clut = (width_or_mode * 2) + FIELD_EFFECT_CLUT_VRAM_Y;
-                    value0 = (((width_or_mode << 6) + FIELD_EFFECT_TEXTURE_VRAM_X) & (VRAM_WIDTH - 1)) >> 6;
-                    value1 = (part->behavior_flags.word >> FIELD_PART_BLEND_TPAGE_SHIFT) & GPU_TPAGE_BLEND_MASK;
-                    value1 |= value0;
-                    ((POLY_FT4*)packet_cursor)->tpage = value1;
+                    tpage_input = (((width_or_mode << 6) + FIELD_EFFECT_TEXTURE_VRAM_X) & (VRAM_WIDTH - 1)) >> 6;
+                    tpage = (part->behavior_flags.word >> FIELD_PART_BLEND_TPAGE_SHIFT) & GPU_TPAGE_BLEND_MASK;
+                    tpage |= tpage_input;
+                    quad->tpage = tpage;
                 }
 
                 if (FIELD_PART_HAS_ANIMATED_PALETTE(part))
                 {
-                    ((POLY_FT4*)packet_cursor)->clut = (frame_y_or_clut + FIELD_ANIMATED_CLUT_ROW) << 6;
+                    quad->clut = (frame_y_or_clut + FIELD_ANIMATED_CLUT_ROW) << 6;
                 }
                 else
                 {
-                    value0 = part->placement_flags.word >> FIELD_PART_PALETTE_SOURCE_SHIFT;
+                    palette_source = part->placement_flags.word >> FIELD_PART_PALETTE_SOURCE_SHIFT;
 
-                    switch (value0 & FIELD_PART_PALETTE_SOURCE_MASK)
+                    switch (palette_source & FIELD_PART_PALETTE_SOURCE_MASK)
                     {
                         case FIELD_PART_PALETTE_SELECTOR:
                         {
-                            u8 uv = part->appearance.fields.palette_selector;
-                            clut_x = uv & 0xF;
+                            u8 selector = part->appearance.fields.palette_selector;
+                            clut_x = selector & 0xF;
 
-                            if (uv >= 0x10)
+                            if (selector >= 0x10)
                             {
-                                value0 = (frame_y_or_clut + 1) << 6;
+                                quad->clut = ((frame_y_or_clut + 1) << 6) | clut_x;
                             }
                             else
                             {
-                                value0 = frame_y_or_clut << 6;
+                                quad->clut = (frame_y_or_clut << 6) | clut_x;
                             }
-
-                            value0 |= clut_x;
-                            ((POLY_FT4*)packet_cursor)->clut = value0;
                             break;
                         }
                         case FIELD_PART_PALETTE_FRAME:
                             if (actor->owner_object_index >= 3)
                             {
                                 clut = frame_y_or_clut << 6;
-                                value0 = part->appearance.fields.palette_selector & 0x3F;
-                                clut |= value0;
-                                ((POLY_FT4*)packet_cursor)->clut = clut;
+                                clut |= part->appearance.fields.palette_selector & 0x3F;
+                                quad->clut = clut;
                                 break;
                             }
 
                             /* Player slots use the frame's own palette, like mode 0. */
                         case FIELD_PART_PALETTE_RESOURCE:
                             clut = frame_y_or_clut << 6;
-                            value0 = frame_data[6] & 0x3F;
-                            clut |= value0;
-                            ((POLY_FT4*)packet_cursor)->clut = clut;
+                            clut |= frame_data[6] & 0x3F;
+                            quad->clut = clut;
                             break;
                     }
                 }
@@ -4089,27 +4086,27 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
                 /* Screen-space and negative-depth sprites use the front entry. */
                 if (effect->flags & FIELD_EFFECT_SCREEN_SPACE)
                 {
-                    addPrim(&ordering_table[0], packet_cursor);
-                    packet_cursor = (s32*)((u8*)packet_cursor + sizeof(POLY_FT4));
+                    addPrim(&ordering_table[0], quad);
+                    quad++;
                 }
                 else
                 {
-                    value1 = effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
+                    ot_depth = effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT;
 
-                    if (value1 < 0)
+                    if (ot_depth < 0)
                     {
-                        addPrim(&ordering_table[0], packet_cursor);
-                        packet_cursor = (s32*)((u8*)packet_cursor + sizeof(POLY_FT4));
+                        addPrim(&ordering_table[0], quad);
+                        quad++;
                     }
-                    else if (value1 > FIELD_WORLD_OT_LAST)
+                    else if (ot_depth > FIELD_WORLD_OT_LAST)
                     {
-                        addPrim(&ordering_table[FIELD_WORLD_OT_LAST], packet_cursor);
-                        packet_cursor = (s32*)((u8*)packet_cursor + sizeof(POLY_FT4));
+                        addPrim(&ordering_table[FIELD_WORLD_OT_LAST], quad);
+                        quad++;
                     }
                     else
                     {
-                        addPrim(&ordering_table[effect->z >> 7], packet_cursor);
-                        packet_cursor = (s32*)((u8*)packet_cursor + sizeof(POLY_FT4));
+                        addPrim(&ordering_table[effect->z >> FIELD_WORLD_OT_DEPTH_SHIFT], quad);
+                        quad++;
                     }
                 }
             }
@@ -4128,17 +4125,16 @@ static s32* field_render_effect_sprite_frames(FieldMotionRecord* effect, s32* pa
 
             frame_data += 9;
             frame_count--;
-            value0 = *(s32*)&((POLY_FT4*)packet_cursor)[-1].r0;
-            SET_BGR0_PACKED(((POLY_FT4*)packet_cursor), value0);
+            SET_BGR0_PACKED(quad, *(u32*)&quad[-1].r0);
         }
     }
 
     if (shadow_count != 0)
     {
-        packet_cursor = (s32*)field_render_actor_ground_shadow((FieldActor*)effect, (POLY_FT4*)packet_cursor, ordering_table, shadow_footprint);
+        quad = field_render_actor_ground_shadow((FieldActor*)effect, quad, ordering_table, shadow_footprint);
     }
 
-    return packet_cursor;
+    return quad;
 }
 
 /* Frame-record processors: field_render_effect_frame8 (8-bit frame coordinates) and field_render_effect_frame16 (16-bit). */
