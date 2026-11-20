@@ -464,7 +464,7 @@ static s32 field_roll_effect_rotation(FieldActorSlot* actor, FieldObjectPart* pa
 static void field_face_effect_target(FieldMotionRecord* effect, FieldObjectPart* part);
 static void field_update_effect_record(FieldMotionRecord* record, FieldObjectPart* part, FieldActorSlot* actor);
 static void field_set_action_context(s32 recipient_id, s32 source_id, s32 action);
-static POLY_FT4* field_render_effect_sprite_frames(FieldMotionRecord* effect, POLY_FT4* quad, s32* ordering_table, u8* frame_data);
+static void* field_render_effect_sprite_frames(FieldMotionRecord* effect, POLY_FT4* quad, s32* ordering_table, u8* frame_data);
 
 /**
  * @brief Free a just-claimed effect record and undo the spawn counts of its part.
@@ -3776,7 +3776,7 @@ void field_render_effects(FieldRenderContext* render_context)
 
                     if (frame_data != NULL)
                     {
-                        packet_cursor = (s32*)field_render_effect_sprite_frames(effect, (POLY_FT4*)packet_cursor, ordering_table, frame_data);
+                        packet_cursor = field_render_effect_sprite_frames(effect, (POLY_FT4*)packet_cursor, ordering_table, frame_data);
                     }
 
                     break;
@@ -3790,7 +3790,7 @@ void field_render_effects(FieldRenderContext* render_context)
 
                         if (frame_data != NULL)
                         {
-                            packet_cursor = (s32*)field_render_effect_sprite_frames(effect, (POLY_FT4*)packet_cursor, ordering_table, frame_data);
+                            packet_cursor = field_render_effect_sprite_frames(effect, (POLY_FT4*)packet_cursor, ordering_table, frame_data);
                         }
                     }
 
@@ -3884,9 +3884,9 @@ void field_render_effects(FieldRenderContext* render_context)
  * @param quad Next free quad in the primitive buffer.
  * @param ordering_table Depth ordering table.
  * @param frame_data Encoded sprite-frame data.
- * @return Next free quad after the emitted sprites and ground shadow.
+ * @return Next free position in the primitive buffer after the emitted sprites and ground shadow.
  */
-static POLY_FT4* field_render_effect_sprite_frames(FieldMotionRecord* effect, POLY_FT4* quad, s32* ordering_table, u8* frame_data)
+static void* field_render_effect_sprite_frames(FieldMotionRecord* effect, POLY_FT4* quad, s32* ordering_table, u8* frame_data)
 {
     Vec2s* screen_origin = FIELD_EFFECT_SCRATCH_SCREEN_ORIGIN;
     Vec2s* shadow_footprint = FIELD_EFFECT_SCRATCH_FOOTPRINT;
